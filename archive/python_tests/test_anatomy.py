@@ -1,36 +1,36 @@
 import cv2
 import numpy as np
 
-# 我们对 img1, img2, img3 里的每种棋子计算其特征值：
-# 1. 十字响应 (cross_score)
-# 2. 左右不对称度 (asymmetry)
-# 3. 顶部锯齿度/开叉度 (top_crown)
-# 4. 宽高比与高度 (height_ratio)
+# Für jede Figurenart aus img1, img2 und img3 werden die Kennzahlen berechnet:
+# 1. Antwort der Kreuzfaltung (cross_score)
+# 2. Unsymmetrie zwischen links und rechts (asymmetry)
+# 3. Zackigkeit bzw. Spreizung oben (top_crown)
+# 4. Seitenverhältnis und Höhe (height_ratio)
 
 def analyze_piece_anatomy(cell_img):
     resized = cv2.resize(cell_img, (60, 60))
     gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
     
-    # 提取纯中心区域
+    # Nur den Zentrumsbereich verwenden
     center = gray[12:48, 12:48]
     
-    # 边缘
+    # Kanten
     gx = cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)
     gy = cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3)
     mag = np.sqrt(gx**2 + gy**2)[10:50, 10:50]
     
-    # 十字响应 (王 K)
-    # 中心 15:25 区域
+    # Antwort der Kreuzfaltung (König)
+    # Bereich 15:25 in der Mitte
     cross_kernel = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], dtype=np.float32)
     cross_resp = cv2.filter2D(mag, -1, cross_kernel)
     cross_max = np.max(cross_resp[10:30, 10:30])
     
-    # 左右不对称度 (马 N)
+    # Unsymmetrie zwischen links und rechts (Springer)
     left_side = mag[:, :20]
     right_side = cv2.flip(mag[:, 20:], 1)[:, :20]
     asym = np.mean(np.abs(left_side - right_side))
     
-    # 顶部 1/3 宽度分布 (后 Q vs 车 R vs 象 B)
+    # Breitenverteilung im oberen Drittel (Dame gegen Turm gegen Läufer)
     top_strip = mag[5:15, :]
     top_profile = np.sum(top_strip, axis=0)
     

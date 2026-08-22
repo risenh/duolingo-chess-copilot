@@ -3,10 +3,10 @@ import zipfile
 import io
 import os
 
-# V9 (bug_10 真机取证): 引擎缺 NNUE 评估网络时会在首次搜索时自行终止。
-# 默认网络文件名由引擎二进制的报错信息给出，必须与编译期内置名严格一致。
+# V9 (Forensik aus bug_10): Fehlt der Engine das NNUE-Bewertungsnetz, beendet sie sich bei der ersten Suche selbst.
+# Den Standarddateinamen nennt die Fehlermeldung der Binary; er muss exakt dem beim Kompilieren eingebauten Namen entsprechen.
 NNUE_FILES = {
-    'nn-5af11540bbfe.nnue': 'android_copilot/app/src/main/assets/nnue/nn-5af11540bbfe.nnue',
+    'nn-5af11540bbfe.nnue': 'dulo/app/src/main/assets/nnue/nn-5af11540bbfe.nnue',
 }
 NNUE_DIRECT_URL_TMPL = 'https://tests.stockfishchess.org/api/nn/{name}'
 
@@ -21,9 +21,9 @@ def setup_stockfish():
     zf = zipfile.ZipFile(io.BytesIO(apk_data))
     
     mapping = {
-        'assets/arm64-v8a/stockfish': 'android_copilot/app/src/main/assets/bin/arm64-v8a/stockfish',
-        'assets/armeabi-v7a/stockfish': 'android_copilot/app/src/main/assets/bin/armeabi-v7a/stockfish',
-        'assets/x86_64/stockfish': 'android_copilot/app/src/main/assets/bin/x86_64/stockfish',
+        'assets/arm64-v8a/stockfish': 'dulo/app/src/main/assets/bin/arm64-v8a/stockfish',
+        'assets/armeabi-v7a/stockfish': 'dulo/app/src/main/assets/bin/armeabi-v7a/stockfish',
+        'assets/x86_64/stockfish': 'dulo/app/src/main/assets/bin/x86_64/stockfish',
     }
     
     for src_entry, dest_path in mapping.items():
@@ -37,18 +37,18 @@ def setup_stockfish():
     return zf
 
 def setup_nnue(zf=None):
-    """提取 NNUE 评估网络: 优先 DroidFish APK 同源，回退 Stockfish 官方直链"""
+    """NNUE-Netz beschaffen: zuerst aus dem DroidFish-APK, ersatzweise über den offiziellen Link"""
     apk_entries = set(zf.namelist()) if zf is not None else set()
     for name, dest_path in NNUE_FILES.items():
         os.makedirs(os.path.dirname(dest_path), exist_ok=True)
         data = None
-        # 源 1: APK 内任意同名 .nnue 条目
+        # Quelle 1: ein gleichnamiger .nnue-Eintrag im APK
         for entry in apk_entries:
             if os.path.basename(entry) == name:
                 data = zf.read(entry)
                 print(f"Extracted NNUE from APK entry {entry}")
                 break
-        # 源 2: 官方直链
+        # Quelle 2: offizieller Link
         if data is None:
             direct_url = NNUE_DIRECT_URL_TMPL.format(name=name)
             print(f"Downloading NNUE from {direct_url} ...")
@@ -56,7 +56,7 @@ def setup_nnue(zf=None):
             with urllib.request.urlopen(req, timeout=300) as res:
                 data = res.read()
         if len(data) < 10 * 1024 * 1024:
-            raise RuntimeError(f"NNUE {name} 过小 ({len(data)} bytes)，疑似下载失败")
+            raise RuntimeError(f"NNUE {name} ist zu klein ({len(data)} Bytes), der Download ist vermutlich fehlgeschlagen")
         with open(dest_path, 'wb') as f:
             f.write(data)
         print(f"NNUE ready: {dest_path} (size: {len(data):,} bytes)")
@@ -66,5 +66,5 @@ if __name__ == '__main__':
     try:
         zf = setup_stockfish()
     except Exception as e:
-        print(f"APK 源不可用 ({e})，NNUE 将走官方直链")
+        print(f"APK-Quelle nicht verfügbar ({e}), das NNUE-Netz kommt über den offiziellen Link")
     setup_nnue(zf)

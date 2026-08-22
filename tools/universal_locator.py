@@ -4,26 +4,26 @@ import os
 
 def universal_locate_board(image):
     """
-    全通用自适应 2D 国际象棋棋盘定位器 (Universal Multi-Scale Checkerboard Locator)
-    无任何机型/屏幕朝向/底部弹窗的先验假设，纯数学特征全局寻优
+    Allgemeiner adaptiver Lokalisator für 2D-Schachbretter (Universal Multi-Scale Checkerboard Locator)
+    Ohne Annahmen über Gerät, Bildschirmausrichtung oder Einblendungen am unteren Rand, rein über die Bildmerkmale
     """
     img_h, img_w = image.shape[:2]
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     
-    # 构造 8x8 交替模式
+    # Abwechselndes 8x8-Muster aufbauen
     pattern = np.zeros((8, 8), dtype=np.float32)
     for r in range(8):
         for c in range(8):
             pattern[r, c] = 1.0 if (r + c) % 2 == 0 else -1.0
             
-    # 降采样到统一尺度 (最大边 480) 保证毫秒级计算
+    # Auf eine einheitliche Größe verkleinern (längste Kante 480), damit die Suche Millisekunden dauert
     max_dim = 480.0
     scale = max_dim / max(img_w, img_h)
     s_w = int(round(img_w * scale))
     s_h = int(round(img_h * scale))
     s_gray = cv2.resize(gray, (s_w, s_h)).astype(np.float32)
     
-    # 边缘梯度
+    # Kantengradient
     gx = cv2.Sobel(s_gray, cv2.CV_32F, 1, 0, ksize=3)
     gy = cv2.Sobel(s_gray, cv2.CV_32F, 0, 1, ksize=3)
     s_mag = np.sqrt(gx**2 + gy**2)
@@ -31,18 +31,18 @@ def universal_locate_board(image):
     best_score = -1e9
     best_rect = None # (x, y, size) in scaled coords
     
-    # 棋盘边长在 scaled 尺度下的范围：min_dim * 0.5 到 min_dim * 0.98
+    # Bereich der Brettkante im verkleinerten Bild: min_dim * 0.5 bis min_dim * 0.98
     min_dim = min(s_w, s_h)
     min_s = max(80, int(min_dim * 0.55))
     max_s = int(min_dim * 0.98)
     
     for size in range(min_s, max_s + 1, 4):
         step = size / 8.0
-        # 遍历 x 坐标
+        # x-Koordinaten durchlaufen
         for x in range(0, s_w - size + 1, 4):
-            # 遍历 y 坐标
+            # y-Koordinaten durchlaufen
             for y in range(0, s_h - size + 1, 4):
-                # 采样 8x8 格子角点均值
+                # Mittelwert der Eckpunkte der 8x8 Felder abtasten
                 grid_means = np.zeros((8, 8), dtype=np.float32)
                 for r in range(8):
                     cy1 = int(y + r * step)
@@ -54,18 +54,18 @@ def universal_locate_board(image):
                         if cell.size == 0:
                             continue
                         ch, cw = cell.shape
-                        # 采样四角各 15% 消除中间棋子遮挡
+                        # Je Ecke 15 % abtasten, damit die Figur in der Mitte nicht stört
                         c1 = cell[0:max(1, int(ch*0.18)), 0:max(1, int(cw*0.18))]
                         c2 = cell[0:max(1, int(ch*0.18)), -max(1, int(cw*0.18)):]
                         c3 = cell[-max(1, int(ch*0.18)):, 0:max(1, int(cw*0.18))]
                         c4 = cell[-max(1, int(ch*0.18)):, -max(1, int(cw*0.18)):]
                         grid_means[r, c] = (np.mean(c1) + np.mean(c2) + np.mean(c3) + np.mean(c4)) / 4.0
                         
-                # 计算 8x8 交替相关性
+                # Übereinstimmung mit dem abwechselnden 8x8-Muster berechnen
                 g_norm = grid_means - np.mean(grid_means)
                 corr = abs(np.sum(g_norm * pattern))
                 
-                # 计算 7+7 条网格线边缘能量
+                # Kantenenergie der 7+7 Gitterlinien berechnen
                 edge_sum = 0.0
                 for i in range(1, 8):
                     ly = int(y + i * step)
@@ -84,13 +84,13 @@ def universal_locate_board(image):
     y = int(round(y_s * inv_scale))
     size = int(round(size_s * inv_scale))
     
-    # 保证在图像内部
+    # Innerhalb des Bildes bleiben
     x = max(0, min(img_w - size, x))
     y = max(0, min(img_h - size, y))
     
     return (x, y, x + size, y + size)
 
-# 在 6 张全量图片上测试
+    # Test über alle 6 Bilder
 os.makedirs("scratch/debug_universal", exist_ok=True)
 all_images = [
     "duolingo_1.jpeg", "duolingo_2.jpg", "duolingo_3.jpg",
@@ -112,4 +112,4 @@ for filename in all_images:
         cv2.line(vis, (l, int(t + i * step)), (r, int(t + i * step)), (0, 255, 0), 1)
     cv2.imwrite(f"scratch/debug_universal/{filename}_board.png", vis)
 
-print("全部 6 张图片通用定位完成！已保存至 scratch/debug_universal/")
+print("Allgemeine Lokalisierung für alle 6 Bilder abgeschlossen, gespeichert unter scratch/debug_universal/")

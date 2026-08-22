@@ -9,7 +9,7 @@ from tools.extract_refined_templates import extract_features_from_cell
 import glob
 
 # Inspect duolingo_test_2.jfif with current templates
-template_dir = "android_copilot/app/src/main/assets/templates"
+template_dir = "dulo/app/src/main/assets/templates"
 template_files = glob.glob(os.path.join(template_dir, "*.png"))
 templates = []
 for tf in template_files:

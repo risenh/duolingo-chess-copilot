@@ -1,8 +1,8 @@
-# ♟️ Duolingo Chess Copilot
+# ♟️ DuLo
 
 <p align="center">
   <a href="README.md">
-    <img src="https://img.shields.io/badge/语言-简体中文-red?style=for-the-badge&logo=google-translate&logoColor=white" alt="简体中文" />
+    <img src="https://img.shields.io/badge/Sprache-Deutsch-red?style=for-the-badge&logo=google-translate&logoColor=white" alt="Deutsch" />
   </a>
   &nbsp;&nbsp;
   <a href="README_EN.md">
@@ -11,8 +11,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/risenh/duolingo-chess-copilot/actions/workflows/build-apk.yml">
-    <img src="https://github.com/risenh/duolingo-chess-copilot/actions/workflows/build-apk.yml/badge.svg" alt="Build Status" />
+  <a href="https://github.com/styres/forkignore/actions/workflows/build-apk.yml">
+    <img src="https://github.com/styres/forkignore/actions/workflows/build-apk.yml/badge.svg" alt="Build Status" />
   </a>
   <img src="https://img.shields.io/badge/Platform-Android%208.0%2B-3DDC84.svg?logo=android&logoColor=white" alt="Platform" />
   <img src="https://img.shields.io/badge/Language-Kotlin%20%7C%20C%2B%2B-7F52FF.svg?logo=kotlin&logoColor=white" alt="Language" />
@@ -68,7 +68,7 @@ flowchart TD
 ## 📂 Project Structure
 
 ```text
-├── android_copilot/         # [Core] Android Native App Project
+├── dulo/         # [Core] Android Native App Project
 │   ├── app/src/main/java/   # Core source code (Locator, Classifier, FloatingService, UI)
 │   ├── app/src/main/jniLibs/# Pre-compiled native Stockfish C++ libraries (.so)
 │   ├── app/src/main/assets/ # Template assets and NNUE neural network weights
@@ -88,9 +88,9 @@ flowchart TD
 
 ### Option 1: Download Pre-built APK
 
-1. Go to the repository's **[Actions Page](https://github.com/risenh/duolingo-chess-copilot/actions)**;
-2. Select the latest successful **`Build Duolingo Chess Copilot APK`** workflow run;
-3. Scroll down to the **Artifacts** section, download and install `Duolingo-Chess-Copilot-APK` on your Android device (Android 8.0+).
+1. Go to the repository's **[Actions Page](https://github.com/styres/forkignore/actions)**;
+2. Select the latest successful **`Build DuLo APK`** workflow run;
+3. Scroll down to the **Artifacts** section, download and install `DuLo-APK` on your Android device (Android 8.0+).
 
 ### Option 2: Build from Source
 
@@ -101,12 +101,12 @@ Requirements:
 
 ```bash
 # 1. Clone the repository with Git LFS
-git clone https://github.com/risenh/duolingo-chess-copilot.git
-cd duolingo-chess-copilot
+git clone https://github.com/styres/forkignore.git
+cd forkignore
 git lfs pull
 
 # 2. Build Debug APK with Gradle
-cd android_copilot
+cd dulo
 ./gradlew assembleDebug
 
 # 3. Output APK location: app/build/outputs/apk/debug/app-debug.apk
@@ -114,12 +114,55 @@ cd android_copilot
 
 ---
 
+## ♟️ Engine Configuration
+
+The engine is configured during the UCI handshake for maximum strength at up to 2 seconds per move (see
+`StockfishBridge`). Only options the engine advertises during the handshake are sent; anything else
+is skipped and noted in the diagnostics.
+
+| Option              | Value                                                                       |
+|---------------------|-----------------------------------------------------------------------------|
+| Threads             | logical cores minus 1 (e.g. 15 on 16 cores), at least 1                      |
+| Hash                | 256 MB on 4-6, 512 MB on 8-12, 1024 MB from 16 logical cores                 |
+| MultiPV             | 1                                                                            |
+| Ponder              | false                                                                        |
+| Skill Level         | 20                                                                           |
+| UCI_LimitStrength   | false                                                                        |
+| Move Overhead       | 10 ms (the engine runs locally on the device)                                |
+| nodestime           | 0                                                                            |
+| UCI_ShowWDL         | true                                                                         |
+| NumaPolicy          | auto                                                                         |
+| SyzygyPath          | only set when tablebases exist under `filesDir/syzygy`                       |
+| SyzygyProbeDepth    | 1 (only with tablebases)                                                     |
+| SyzygyProbeLimit    | 5 (only with tablebases)                                                     |
+| Syzygy50MoveRule    | true (only with tablebases)                                                  |
+| Search command      | `go depth 30 movetime 2000`; `ucinewgame` only at the start of a new game    |
+
+- **Binary variant**: if variants such as `libstockfish-vnni512.so`, `-bmi2`, `-avx2`,
+  `-armv8-i8mm` or `-armv8-dotprod` ship alongside the generic `libstockfish.so`, the app picks the
+  strongest one supported by the CPU features found in `/proc/cpuinfo`.
+- **Hash re-tuning**: when the engine reports an average `hashfull` above 30 percent, the app
+  doubles the hash, up to four times the initial value.
+- **Device memory cap**: the table value is capped at a quarter of physical RAM, otherwise Android
+  kills the engine process on low-memory phones.
+- **Large pages**: the "Lock pages in memory" privilege only exists on Windows and does not apply
+  here; grant it to the user account when running the same configuration on a Windows machine.
+
+Note on reproducibility: with multiple threads the search under `movetime` is no longer
+deterministic. Results are cached per FEN, so tapping twice on an unchanged board still yields the
+same recommendation.
+
+---
+
 ## 📱 Permissions & Usage
 
 1. **Grant Permissions**: Grant **Overlay Permission** (`SYSTEM_ALERT_WINDOW`) and **Screen Capture Permission** (`MediaProjection`) on first launch.
-2. **Start Copilot**: Tap "Start Copilot" to display the floating bubble.
+2. **Toggle DuLo**: The toggle button on the main screen is a photo of DuLo (the app is named after the dog). Tapping it starts the service, the picture then lights up with a green frame; tapping again stops it and the picture is dimmed. The app's user interface is German.
 3. **Open Duolingo**: Launch Duolingo and enter any chess lesson or game.
-4. **Instant Analysis**: Tap the floating bubble to instantly view best moves and evaluation arrows.
+4. **Open the bubble menu**: Tap the bubble to open a small menu with an **Analyse** switch (off by default) and a **Beenden** button. With the switch on, the engine is queried immediately and then again automatically whenever one of *your own* pieces has changed square; the arrow stays on screen until the next move is detected. **Beenden** closes the menu and stops the service together with the screen capture.
+5. **Flip your side**: If the arrow ever suggests moves for the opponent's pieces, long-press the bubble to switch your own colour. The manual choice stays in effect until you long-press again or restart the service.
+
+Nothing is written to disk or copied to the clipboard — screenshots stay in memory only.
 
 ---
 

@@ -9,7 +9,7 @@ from tools.test_full_pipeline_v2 import fast_sat_locate_board
 from tools.extract_refined_templates import extract_features_from_cell
 from tools.validate_all_fen import sanitize_board_py, build_fen_py
 
-template_dir = "android_copilot/app/src/main/assets/templates"
+template_dir = "dulo/app/src/main/assets/templates"
 template_files = glob.glob(os.path.join(template_dir, "*.png"))
 templates = []
 for tf in template_files:

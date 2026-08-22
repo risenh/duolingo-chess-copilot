@@ -30,7 +30,7 @@ def verify_all_v5():
         assert r > l and b > t, "Board coordinates invalid"
         assert 0.80 <= (r - l) / w <= 0.99, f"Board width ratio out of expected range: {(r - l) / w}"
         assert 0.70 <= b / h <= 0.99, f"Board bottom ratio out of expected range: {b / h}"
-        print("  --> 定位合理性校验通过 (避开顶部卡通气泡与底部按钮)")
+        print("  --> Plausibilitätsprüfung der Lokalisierung bestanden (Sprechblase oben und Schaltflächen unten ausgespart)")
 
     print("\n[SUCCESS] All 5 benchmark images passed SAT locator validation with 100% precision!")
 

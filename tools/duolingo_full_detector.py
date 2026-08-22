@@ -11,12 +11,12 @@ class DuolingoChessDetector:
     def detect_image(self, image_path):
         img = cv2.imread(image_path)
         if img is None:
-            raise FileNotFoundError(f"找不到图片: {image_path}")
+            raise FileNotFoundError(f"Bild nicht gefunden: {image_path}")
             
         l, t, r, b = find_bottom_edge_and_board(img)
         step = (r - l) / 8.0
         
-        raw_board = [] # 8x8 从屏幕顶部到屏幕底部
+        raw_board = [] # 8x8 von der Bildschirmoberkante zur Unterkante
         for row in range(8):
             row_symbols = []
             for col in range(8):
@@ -31,27 +31,27 @@ class DuolingoChessDetector:
                 row_symbols.append(symbol)
             raw_board.append(row_symbols)
             
-        # 判定视角朝向 (Orientation):
-        # 统计屏幕顶部 2 行和底部 2 行的棋子阵营
+        # Perspektive bestimmen (Orientation):
+        # Farbzugehörigkeit der Figuren in den obersten und untersten 2 Reihen zählen
         top_white_count = sum(1 for r in range(2) for c in range(8) if raw_board[r][c].isupper())
         top_black_count = sum(1 for r in range(2) for c in range(8) if raw_board[r][c].islower())
         
         bottom_white_count = sum(1 for r in range(6, 8) for c in range(8) if raw_board[r][c].isupper())
         bottom_black_count = sum(1 for r in range(6, 8) for c in range(8) if raw_board[r][c].islower())
         
-        # 如果底部大多是白棋，说明是白方视角（正常朝向：第8行到第1行）
-        # 如果底部大多是黑棋，说明是黑方视角（旋转朝向：屏幕顶部是白方第1行，屏幕底部是黑方第8行）
+        # Stehen unten überwiegend weiße Figuren, ist es die Sicht von Weiß (normale Lage: Reihe 8 bis Reihe 1)
+        # Stehen unten überwiegend schwarze Figuren, ist es die Sicht von Schwarz (gedreht: oben Reihe 1 von Weiß, unten Reihe 8 von Schwarz)
         is_white_perspective = (bottom_white_count >= bottom_black_count)
         
         if is_white_perspective:
-            standard_board = raw_board # 屏幕第0行对应棋盘 rank 8
+            standard_board = raw_board # Bildschirmzeile 0 entspricht Reihe 8
             active_color = 'w'
         else:
-            # 翻转 180 度得到标准从 rank 8 到 rank 1 的矩阵
+            # Um 180 Grad drehen, damit die Matrix wieder von Reihe 8 bis Reihe 1 läuft
             standard_board = [row[::-1] for row in raw_board[::-1]]
             active_color = 'b'
             
-        # 构建 FEN 字符串
+        # FEN zusammensetzen
         fen_rows = []
         for row in standard_board:
             fen_row = ''

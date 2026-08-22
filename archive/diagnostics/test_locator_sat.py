@@ -7,13 +7,13 @@ def fast_locate_duolingo_board(image):
     img_h, img_w = image.shape[:2]
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     
-    # 1. 降采样到统一尺度 (400px 宽)
+    # 1. Auf eine einheitliche Größe verkleinern (400px Breite)
     scale = 400.0 / img_w
     s_w = 400
     s_h = int(img_h * scale)
     s_gray = cv2.resize(gray, (s_w, s_h)).astype(np.float32)
     
-    # 2. 边缘梯度的 Integral Image
+    # 2. Integralbild des Kantengradienten
     gx = cv2.Sobel(s_gray, cv2.CV_32F, 1, 0, ksize=3)
     gy = cv2.Sobel(s_gray, cv2.CV_32F, 0, 1, ksize=3)
     mag = np.abs(gx) + np.abs(gy)
@@ -50,7 +50,7 @@ def fast_locate_duolingo_board(image):
             y_min = int(s_h * 0.20)
             y_max = s_h - size
             for y in range(y_min, y_max, 2):
-                # 1. 7条横纵分割线边缘能量
+                # 1. Kantenenergie der 7 waagerechten und senkrechten Trennlinien
                 edge_score = 0.0
                 for i in range(1, 8):
                     ly = int(y + i * step)
@@ -58,7 +58,7 @@ def fast_locate_duolingo_board(image):
                     edge_score += rect_mean(sat_mag, x, ly - 1, x + size, ly + 2)
                     edge_score += rect_mean(sat_mag, lx - 1, y, lx + 2, y + size)
                     
-                # 2. 8x8 格子 4 角采样
+                # 2. Die 4 Ecken der 8x8 Felder abtasten
                 grid_means = np.zeros((8, 8), dtype=np.float32)
                 corner_w = max(1, int(step * 0.2))
                 for r in range(8):
@@ -76,7 +76,7 @@ def fast_locate_duolingo_board(image):
                 g_norm = grid_means - np.mean(grid_means)
                 corr = abs(np.sum(g_norm * pattern))
                 
-                # 3. 底部合理性先验 (多邻国棋盘底部一般在屏幕下部 75%~98%)
+                # 3. Annahme zur Lage unten (die Unterkante des Duolingo-Bretts liegt meist zwischen 75 % und 98 %)
                 bottom_ratio = (y + size) / s_h
                 pos_prior = 1.0 if 0.72 <= bottom_ratio <= 0.98 else 0.35
                 

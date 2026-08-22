@@ -3,32 +3,32 @@ import numpy as np
 
 def extract_geometry_profile(cell_img):
     """
-    提取棋子不受分辨率和压缩影响的 6 大本质几何物理不变量：
-    1. aspect_ratio: 纵横比
-    2. top_vs_bottom_width: 顶部宽度与底部宽度比值（Queen > 1.2, Rook ≈ 1.0, Pawn < 0.7）
-    3. asymmetry: 左右质心与边缘不对称度（Knight 显著极高）
-    4. area_fill: 轮廓面积占外接框比例
-    5. cross_response: 中心十字卷积响应（King 独有）
+    Ermittelt 6 geometrische Kenngrößen einer Figur, die von Auflösung und Kompression unabhängig sind:
+    1. aspect_ratio: Seitenverhältnis
+    2. top_vs_bottom_width: Verhältnis der Breite oben zu unten (Dame > 1.2, Turm ≈ 1.0, Bauer < 0.7)
+    3. asymmetry: Unsymmetrie von Schwerpunkt und Rand nach links und rechts (beim Springer besonders hoch)
+    4. area_fill: Anteil der Umrissfläche am umschließenden Rechteck
+    5. cross_response: Antwort der Kreuzfaltung in der Mitte (nur beim König)
     """
-    # 统一尺寸 40x40
+    # Einheitliche Größe 40x40
     resized = cv2.resize(cell_img, (40, 40))
     gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
     core = gray[6:34, 6:34] # 28x28
     
-    # 局部背景
+    # Lokaler Hintergrund
     bg = (np.mean(core[:3, :3]) + np.mean(core[:3, -3:]) + 
           np.mean(core[-3:, :3]) + np.mean(core[-3:, -3:])) / 4.0
     
-    # 前景二值化
+    # Vordergrund binarisieren
     diff = np.abs(core.astype(np.float32) - bg)
     thresh = np.max(diff) * 0.35
     mask = (diff > thresh).astype(np.uint8)
     
-    # 若无有效前景
+    # Falls kein brauchbarer Vordergrund vorliegt
     if np.sum(mask) < 25:
         return {'is_empty': True, 'mean': np.mean(core)}
         
-    # 水平每行宽度
+    # Breite jeder Zeile
     row_widths = np.sum(mask, axis=1)
     active_rows = np.where(row_widths > 1)[0]
     if len(active_rows) == 0:
@@ -38,18 +38,18 @@ def extract_geometry_profile(cell_img):
     bot_r = active_rows[-1]
     height = bot_r - top_r + 1
     
-    # 顶部 1/3 宽度 vs 底部 1/3 宽度
+    # Breite im oberen Drittel gegen die im unteren Drittel
     top_w = np.mean(row_widths[top_r : top_r + max(1, height//3)])
     bot_w = np.mean(row_widths[max(top_r, bot_r - height//3) : bot_r + 1])
     top_bot_ratio = top_w / (bot_w + 1e-3)
     
-    # 左右不对称度
+    # Unsymmetrie zwischen links und rechts
     w_half = mask.shape[1] // 2
     left_m = mask[:, :w_half]
     right_m = cv2.flip(mask[:, w_half:], 1)[:, :w_half]
     asym = np.sum(np.abs(left_m - right_m)) / (np.sum(mask) + 1e-3)
     
-    # 十字响应
+    # Antwort der Kreuzfaltung
     cross_kernel = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], dtype=np.float32)
     cross_resp = cv2.filter2D(diff, -1, cross_kernel)
     cross_score = np.max(cross_resp[6:22, 6:22]) / (np.max(diff) + 1e-3)
@@ -75,23 +75,23 @@ class DuolingoAnatomyClassifier:
                 if p['is_empty'] or p['area'] < 40:
                     continue
                     
-                # 规则物理决策：
-                # 1. 马 Knight: 左右显著不对称 (asym 高)
+                # Entscheidung nach geometrischen Regeln:
+                # 1. Springer: deutlich unsymmetrisch (hoher asym-Wert)
                 if p['asym'] > 0.28:
                     cls_name = 'N'
-                # 2. 王 King: 胸口有十字特征且面积大
+                # 2. König: Kreuz auf der Brust und große Fläche
                 elif p['cross'] > 3.2 and p['area'] > 120:
                     cls_name = 'K'
-                # 3. 后 Queen: 顶部开叉外扩，top_bot_ratio 很高
+                # 3. Dame: nach oben gespreizte Krone, sehr hohes top_bot_ratio
                 elif p['top_bot_ratio'] > 0.95 and p['area'] > 110:
                     cls_name = 'Q'
-                # 4. 车 Rook: 上下等宽直筒，且高度适中
+                # 4. Turm: oben und unten gleich breit, mittlere Höhe
                 elif 0.75 <= p['top_bot_ratio'] <= 1.05 and p['area'] > 110:
                     cls_name = 'R'
-                # 5. 象 Bishop: 尖顶，顶部宽度小，中间饱满
+                # 5. Läufer: spitzes Oberteil, oben schmal, in der Mitte voll
                 elif p['top_bot_ratio'] < 0.75 and p['area'] > 95:
                     cls_name = 'B'
-                # 6. 兵 Pawn: 面积最小，高度最矮
+                # 6. Bauer: kleinste Fläche, geringste Höhe
                 else:
                     cls_name = 'P'
                     
@@ -100,7 +100,7 @@ class DuolingoAnatomyClassifier:
         if not occupied:
             return [['.' for _ in range(8)] for _ in range(8)]
             
-        # 自适应 2-Means 划分黑白
+        # Adaptives 2-Means-Clustering trennt Schwarz und Weiß
         means = [item[2]['mean'] for item in occupied]
         c1, c2 = min(means), max(means)
         for _ in range(10):
@@ -119,4 +119,4 @@ class DuolingoAnatomyClassifier:
             
         return board_res
 
-print("DuolingoAnatomyClassifier 几何物理分类器构建完成！")
+print("Der geometrische Klassifikator DuolingoAnatomyClassifier ist einsatzbereit")

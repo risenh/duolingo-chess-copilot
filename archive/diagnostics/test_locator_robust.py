@@ -7,7 +7,7 @@ def locate_duolingo_board_robust(image):
     img_h, img_w = image.shape[:2]
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     
-    # 1. 计算 Sobel 梯度
+    # 1. Sobel-Gradient berechnen
     grad_x = cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)
     grad_y = cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3)
     mag = np.abs(grad_x) + np.abs(grad_y)
@@ -36,7 +36,7 @@ def locate_duolingo_board_robust(image):
             y_min = int(s_h * 0.20)
             y_max = s_h - size
             for y in range(y_min, y_max, 4):
-                # 1. 网格分割线边缘能量
+                # 1. Kantenenergie der Trennlinien
                 edge_score = 0.0
                 for i in range(1, 8):
                     ly = int(y + i * step)
@@ -44,7 +44,7 @@ def locate_duolingo_board_robust(image):
                     edge_score += np.mean(s_mag[max(0, ly-1):min(s_h, ly+2), x:x+size])
                     edge_score += np.mean(s_mag[y:y+size, max(0, lx-1):min(s_w, lx+2)])
                     
-                # 2. 采样 4 角落棋盘格交替方差 (避开棋子中心)
+                # 2. Varianz des abwechselnden Musters an den 4 Ecken (spart die Figur in der Mitte aus)
                 grid_means = np.zeros((8, 8), dtype=np.float32)
                 for r in range(8):
                     cy1 = int(y + r * step)
@@ -67,7 +67,7 @@ def locate_duolingo_board_robust(image):
                 g_norm = grid_means - np.mean(grid_means)
                 corr = abs(np.sum(g_norm * pattern))
                 
-                # 3. 垂直合理性先验
+                # 3. Plausibilitätsannahme zur senkrechten Lage
                 bottom_ratio = (y + size) / s_h
                 pos_prior = 1.0 if 0.70 <= bottom_ratio <= 0.98 else 0.35
                 

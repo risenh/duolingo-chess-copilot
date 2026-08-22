@@ -7,22 +7,22 @@ h, w = img8.shape[:2]
 # Let's save small crops of lines in bug_8.jpg
 # Top card:
 # Lines:
-# 1. 【离线诊断结果】
-# 2. 棋盘坐标: [L=16, T=1043, R=1248, B=2275]
-# 3. 视角方向: 执白 (White)
-# 4. 局面 FEN: ...
-# 5. 完整 FEN: ...
+# 1. [Diagnose eines einzelnen Screenshots]
+# 2. Brettkoordinaten: [L=16, T=1043, R=1248, B=2275]
+# 3. Perspektive: Weiß (White)
+# 4. Stellung (FEN): ...
+# 5. Vollständiges FEN: ...
 # 6. -----------------------------
-# 7. 推荐走法: ...
-# 8. 局势评估分: +0.00
-# 9. 搜索深度: 0 层 [兜底生成器]
+# 7. Empfohlener Zug: ...
+# 8. Bewertung: +0.00
+# 9. Suchtiefe: 0 [Fallback-Generator]
 # 10. -----------------------------
-# 11. 【引擎就绪 (路径1 (nativeLibDir))】
-# 12. 路径1 [nativeLibDir]: exists=true, canExec=true
-# 13. 进程启动: 成功 (路径1 (nativeLibDir))
-# 14. 握手 [uciok]: 成功 (14ms)
-# 15. 握手 [readyok]: 成功 (8ms)
-# 16. 总耗时: 28ms | 真实 Stockfish 准备就绪
+# 11. [Engine bereit (Pfad1 (nativeLibDir))]
+# 12. Pfad1 [nativeLibDir]: exists=true, canExec=true
+# 13. Prozessstart: erfolgreich (Pfad1 (nativeLibDir))
+# 14. Handshake [uciok]: erfolgreich (14ms)
+# 15. Handshake [readyok]: erfolgreich (8ms)
+# 16. Gesamtdauer: 28ms | echtes Stockfish ist bereit
 
 # Let's inspect the exact lines!
 for i in range(10):

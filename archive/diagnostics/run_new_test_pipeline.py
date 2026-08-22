@@ -30,7 +30,7 @@ def evaluate_test_image(img_path, out_demo_path):
         
     raw_board = classifier.classify_board(cells_8x8)
     
-    # 统计顶底白黑子数量判定朝向
+    # Weiße und schwarze Figuren oben und unten zählen, um die Perspektive zu bestimmen
     top_white = sum(1 for r in range(2) for c in range(8) if raw_board[r][c].isupper())
     top_black = sum(1 for r in range(2) for c in range(8) if raw_board[r][c].islower())
     bot_white = sum(1 for r in range(6, 8) for c in range(8) if raw_board[r][c].isupper())
@@ -70,14 +70,14 @@ def evaluate_test_image(img_path, out_demo_path):
         print(" ".join(r))
     print(f"FEN: {full_fen}")
     
-    # 引擎获取最佳走法
+    # Besten Zug von der Engine holen
     move_info = evaluate_fen_cloud(full_fen)
     print(f"Stockfish Result: {move_info}")
     
     if 'best_move' in move_info:
         vis = draw_overlay_suggestion(img, move_info, board_rect, is_white_persp)
         cv2.imwrite(out_demo_path, vis)
-        print(f"Demo 渲染已保存: {out_demo_path}")
+        print(f"Darstellung gespeichert: {out_demo_path}")
         
     return {
         'fen': full_fen,

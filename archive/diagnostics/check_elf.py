@@ -1,5 +1,5 @@
 import struct
-with open("android_copilot/app/src/main/jniLibs/arm64-v8a/libstockfish.so", "rb") as f:
+with open("dulo/app/src/main/jniLibs/arm64-v8a/libstockfish.so", "rb") as f:
     header = f.read(64)
     magic = header[:4]
     elf_class = header[4] # 1=32bit, 2=64bit

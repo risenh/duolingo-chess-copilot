@@ -1,5 +1,5 @@
-// 下载 NNUE 网络：优先 DroidFish APK 同源提取；F-Droid 不可用时回退官方直链
-// 用法: node fetch_nnue.js
+// NNUE-Netz beschaffen: zuerst aus dem DroidFish-APK, bei nicht erreichbarem F-Droid über den offiziellen Link
+// Aufruf: node fetch_nnue.js
 'use strict';
 const https = require('https');
 const crypto = require('crypto');
@@ -9,8 +9,8 @@ const zlib = require('zlib');
 
 const APK_URL = 'https://f-droid.org/repo/org.petero.droidfish_99.apk';
 const APK_LOCAL = path.join(__dirname, 'droidfish.apk');
-const NNUE_OUT_DIR = path.join(__dirname, '..', 'android_copilot', 'app', 'src', 'main', 'assets', 'nnue');
-// 官方直链（文件名由引擎二进制的报错信息给出，与编译期内置默认网络严格一致）
+const NNUE_OUT_DIR = path.join(__dirname, '..', 'dulo', 'app', 'src', 'main', 'assets', 'nnue');
+// Offizieller Link (den Dateinamen nennt die Fehlermeldung der Binary, er entspricht exakt dem eingebauten Standardnetz)
 const NNUE_DIRECT = [
     { name: 'nn-5af11540bbfe.nnue', url: 'https://tests.stockfishchess.org/api/nn/nn-5af11540bbfe.nnue' }
 ];
@@ -33,20 +33,20 @@ function download(url, dest, redirects = 0) {
             res.on('data', (chunk) => {
                 got += chunk.length;
                 if (total > 0 && Math.floor(got / total * 20) !== Math.floor((got - chunk.length) / total * 20)) {
-                    process.stdout.write(`\r  下载进度: ${(got / 1048576).toFixed(1)}/${(total / 1048576).toFixed(1)} MB`);
+                    process.stdout.write(`\r  Fortschritt: ${(got / 1048576).toFixed(1)}/${(total / 1048576).toFixed(1)} MB`);
                 }
             });
             res.pipe(ws);
-            ws.on('finish', () => { ws.close(); console.log('\n  下载完成: ' + dest); resolve(); });
+            ws.on('finish', () => { ws.close(); console.log('\n  Download abgeschlossen: ' + dest); resolve(); });
             ws.on('error', reject);
         });
         req.on('error', reject);
     });
 }
 
-// 极简 Zip 解析：EOCD -> 中心目录 -> 本地文件头
+// Minimaler Zip-Parser: EOCD -> zentrales Verzeichnis -> lokaler Dateikopf
 function readZipEntries(buf) {
-    // 从尾部反向搜索 EOCD 签名 0x06054b50
+    // Die EOCD-Signatur 0x06054b50 vom Dateiende her rückwärts suchen
     let eocd = -1;
     for (let i = buf.length - 22; i >= Math.max(0, buf.length - 22 - 65536); i--) {
         if (buf.readUInt32LE(i) === 0x06054b50) { eocd = i; break; }
@@ -86,17 +86,17 @@ function extractEntry(buf, entry) {
 
 async function tryFromApk() {
     if (!fs.existsSync(APK_LOCAL)) {
-        console.log('从 ' + APK_URL + ' 下载 DroidFish APK ...');
+        console.log('DroidFish-APK von ' + APK_URL + ' herunterladen ...');
         await download(APK_URL, APK_LOCAL);
     } else {
-        console.log('复用已下载 APK: ' + APK_LOCAL);
+        console.log('Bereits geladenes APK wird verwendet: ' + APK_LOCAL);
     }
     const buf = fs.readFileSync(APK_LOCAL);
     const entries = readZipEntries(buf);
-    console.log('APK 条目总数: ' + entries.length);
+    console.log('Anzahl der Einträge im APK: ' + entries.length);
     const nnueEntries = entries.filter(e => e.name.toLowerCase().endsWith('.nnue'));
     if (nnueEntries.length === 0) {
-        console.log('!! APK 内未找到 .nnue 文件，assets 清单:');
+        console.log('!! Keine .nnue-Datei im APK gefunden, Inhalt von assets:');
         entries.filter(e => e.name.startsWith('assets/')).forEach(e => console.log('  ' + e.name));
         return false;
     }
@@ -104,7 +104,7 @@ async function tryFromApk() {
     for (const e of nnueEntries) {
         const outName = path.basename(e.name);
         const outPath = path.join(NNUE_OUT_DIR, outName);
-        console.log('提取 ' + e.name + ' (' + (e.uncompSize / 1048576).toFixed(1) + ' MB) -> ' + outPath);
+        console.log('Entpacke ' + e.name + ' (' + (e.uncompSize / 1048576).toFixed(1) + ' MB) -> ' + outPath);
         const data = extractEntry(buf, e);
         if (data.length !== e.uncompSize) throw new Error('size mismatch for ' + e.name);
         fs.writeFileSync(outPath, data);
@@ -116,18 +116,18 @@ async function fromDirect() {
     fs.mkdirSync(NNUE_OUT_DIR, { recursive: true });
     for (const item of NNUE_DIRECT) {
         const outPath = path.join(NNUE_OUT_DIR, item.name);
-        console.log('从官方直链下载 ' + item.url + ' ...');
+        console.log('Lade vom offiziellen Link ' + item.url + ' ...');
         await download(item.url, outPath);
         const data = fs.readFileSync(outPath);
         const sha = crypto.createHash('sha256').update(data).digest('hex');
-        console.log('  大小: ' + (data.length / 1048576).toFixed(1) + ' MB | SHA-256: ' + sha);
-        // 防下载到 HTML/JSON 错误页：二进制网络文件不应以文本标记开头；NNUE 正常头 4 字节为版本号 0x7AF32F84
+        console.log('  Größe: ' + (data.length / 1048576).toFixed(1) + ' MB | SHA-256: ' + sha);
+        // Schutz vor heruntergeladenen HTML- oder JSON-Fehlerseiten: eine Binärdatei beginnt nicht mit Text, die ersten 4 Bytes eines NNUE-Netzes sind die Version 0x7AF32F84
         const head4 = data.readUInt32LE(0);
         const looksLikeText = ['<!DO', '<htm', '{', '<'].some(s => data.subarray(0, s.length).toString('latin1').startsWith(s));
         if (looksLikeText || data.length < 10 * 1024 * 1024) {
-            throw new Error('下载内容疑似错误页或过小 (head=0x' + head4.toString(16) + ')，拒绝写入');
+            throw new Error('Der Inhalt sieht nach einer Fehlerseite aus oder ist zu klein (head=0x' + head4.toString(16) + '), er wird nicht geschrieben');
         }
-        console.log('  头部魔数: 0x' + head4.toString(16).toUpperCase() + (head4 === 0x7AF32F84 ? ' (符合 NNUE 版本号)' : ' (非 NNUE 标准版本号，请人工复核)'));
+        console.log('  Kopfkennung: 0x' + head4.toString(16).toUpperCase() + (head4 === 0x7AF32F84 ? ' (gültige NNUE-Version)' : ' (keine übliche NNUE-Version, bitte prüfen)'));
     }
 }
 
@@ -136,8 +136,8 @@ async function fromDirect() {
     try {
         ok = await tryFromApk();
     } catch (e) {
-        console.log('APK 源失败: ' + e.message + '，回退官方直链...');
+        console.log('APK-Quelle fehlgeschlagen: ' + e.message + ', Rückfall auf den offiziellen Link ...');
     }
     if (!ok) await fromDirect();
-    console.log('NNUE 就绪于: ' + NNUE_OUT_DIR);
-})().catch((err) => { console.error('\n失败: ' + err.message); process.exit(1); });
+    console.log('NNUE liegt bereit unter: ' + NNUE_OUT_DIR);
+})().catch((err) => { console.error('\nFehlgeschlagen: ' + err.message); process.exit(1); });

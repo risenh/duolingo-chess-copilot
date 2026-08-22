@@ -3,9 +3,9 @@ import os
 import shutil
 
 def export_all_verified_templates():
-    out_dir = "android_copilot/app/src/main/assets/templates"
+    out_dir = "dulo/app/src/main/assets/templates"
     
-    # 清空旧模板
+    # Alte Vorlagen entfernen
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
     os.makedirs(out_dir, exist_ok=True)
@@ -69,7 +69,7 @@ def export_all_verified_templates():
                     total += 1
                     idx += 1
                     
-    print(f"成功导出全量 {total} 个经过实战验证的模板至 {out_dir}")
+    print(f"{total} in der Praxis geprüfte Vorlagen nach {out_dir} exportiert")
 
 if __name__ == '__main__':
     export_all_verified_templates()

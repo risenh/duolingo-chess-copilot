@@ -7,24 +7,24 @@ import numpy as np
 
 def extract_features_from_cell(cell_img):
     """
-    自适应质心对齐 + 滑动窗口钳制 + 分数级双区域特征提取 (36x36 ROI)
+    Schwerpunktausrichtung, Schiebefenster-Klemmung und Merkmalsextraktion zweier Regionen (36x36 ROI)
     """
     resized = cv2.resize(cell_img, (48, 48), interpolation=cv2.INTER_LINEAR)
     gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY) if len(resized.shape) == 3 else resized.copy()
     
-    # 1. 占用门控统计 (基于 30x30 中心区)
+    # 1. Statistik für das Belegungsgatter (auf Basis der 30x30-Zentrumsregion)
     center_roi = gray[9:39, 9:39].astype(np.float32)
     center_std = float(np.std(center_roi))
     center_mean = float(np.mean(center_roi))
     
-    # 全图 Sobel 梯度
+    # Sobel-Gradient des gesamten Feldes
     sobelx = cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)
     sobely = cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3)
     mag_full = np.sqrt(sobelx**2 + sobely**2)
     grad_mean = float(np.mean(mag_full[9:39, 9:39]))
     
-    # 2. 4 角中值背景差分探测前景质心 (3x3 四角采样，共 36 点统一取中值)
-    # 限制在 [2:46, 2:46] 内部区域探测，防止外圈 2px 边界线/邻格边缘侵入拉偏质心
+    # 2. Vordergrundschwerpunkt per Hintergrunddifferenz aus dem Median der 4 Ecken (3x3 je Ecke, 36 Punkte, gemeinsamer Median)
+    # Die Suche bleibt im Innenbereich [2:46, 2:46], damit die 2px-Randlinien und die Kanten der Nachbarfelder den Schwerpunkt nicht verziehen
     corner_pixels = np.concatenate([
         gray[0:3, 0:3].flatten(), gray[0:3, 45:48].flatten(),
         gray[45:48, 0:3].flatten(), gray[45:48, 45:48].flatten()
@@ -42,16 +42,16 @@ def extract_features_from_cell(cell_img):
         cy = 24.0
         cx = 24.0
         
-    # 3. 滑动窗口原点钳制 (保证 ROI 恒为 36x36)
+    # 3. Schiebefenster-Klemmung des Ursprungs (die ROI bleibt exakt 36x36)
     x0 = int(np.clip(round(cx - 18), 0, 12))
     y0 = int(np.clip(round(cy - 18), 0, 12))
     
-    # 4. 身体特征: 30x30 (从 36x36 中居中取 30x30)
+    # 4. Körpermerkmal: 30x30 (zentriert aus dem 36x36-Fenster)
     body_mag = mag_full[y0+3:y0+33, x0+3:x0+33].flatten()
     body_norm = np.linalg.norm(body_mag) + 1e-5
     f_body = (body_mag / body_norm).astype(np.float32)
     
-    # 5. 头部特征: 10x30 (从 30x30 身体中取前 10 行)
+    # 5. Kopfmerkmal: 10x30 (die obersten 10 Zeilen des 30x30-Körpers)
     head_mag = mag_full[y0+3:y0+13, x0+3:x0+33].flatten()
     head_norm = np.linalg.norm(head_mag) + 1e-5
     f_head = (head_mag / head_norm).astype(np.float32)

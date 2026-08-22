@@ -22,7 +22,7 @@ cell = img[cy1:cy2, cx1:cx2]
 f = extract_features_from_cell(cell)
 print(f"Row 3 Col 2 (pawn): center_std={f['center_std']}, grad_mean={f['grad_mean']}")
 
-template_dir = "android_copilot/app/src/main/assets/templates"
+template_dir = "dulo/app/src/main/assets/templates"
 template_files = glob.glob(os.path.join(template_dir, "*.png"))
 templates = []
 for tf in template_files:

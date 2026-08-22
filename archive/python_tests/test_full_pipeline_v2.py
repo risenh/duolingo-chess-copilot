@@ -12,7 +12,7 @@ from tools.image_utils import resolve_image_path, load_image
 
 def fast_sat_locate_board(image, return_score=False, top_n=3):
     """
-    与 Kotlin ChessLocator 保持 1:1 对偶一致的格线精标定定位器
+    Lokalisator mit Gitterlinien-Feinkalibrierung, deckungsgleich zum ChessLocator in Kotlin
     """
     res = locate_board(image, top_n=top_n)
     if res is None:

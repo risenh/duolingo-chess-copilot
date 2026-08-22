@@ -4,18 +4,18 @@ import os
 
 def find_board_rect_checkerboard_corr(image):
     """
-    基于 8x8 棋盘格交替相关性（Checkerboard Alternating Correlation）精准定位棋盘
+    Lokalisiert das Brett über die Korrelation mit dem abwechselnden 8x8-Muster (Checkerboard Alternating Correlation)
     """
     img_h, img_w = image.shape[:2]
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     
-    # 构造标准的 8x8 交替模式 (+1, -1, +1, -1 ...)
+    # Das abwechselnde 8x8-Muster aufbauen (+1, -1, +1, -1 ...)
     pattern = np.zeros((8, 8), dtype=np.float32)
     for r in range(8):
         for c in range(8):
             pattern[r, c] = 1.0 if (r + c) % 2 == 0 else -1.0
             
-    # 缩小做快速搜索
+    # Für die schnelle Suche verkleinern
     scale = 300.0 / img_w
     small_w = 300
     small_h = int(img_h * scale)
@@ -24,18 +24,18 @@ def find_board_rect_checkerboard_corr(image):
     best_score = -1.0
     best_rect = None
     
-    # 搜索尺寸 (在 small 尺度下，棋盘宽度通常为 250 ~ 298)
+    # Suchgrößen (im verkleinerten Bild liegt die Brettbreite meist zwischen 250 und 298)
     for size in range(240, min(small_w, 298), 2):
-        # x 居中搜索
+        # x mittig durchsuchen
         center_x = (small_w - size) // 2
         for x in range(max(0, center_x - 10), min(small_w - size + 1, center_x + 11), 2):
-            # y 坐标在屏幕 25% 到 85% 之间
+            # y liegt zwischen 25 % und 85 % der Bildhöhe
             for y in range(int(small_h * 0.2), int(small_h * 0.9) - size, 3):
-                # 提取 8x8 格子均值
+                # Mittelwerte der 8x8 Felder bestimmen
                 step = size / 8.0
                 grid_means = np.zeros((8, 8), dtype=np.float32)
                 
-                # 为避免棋子中心干扰，取每个格子的 4 个角落或边缘区域采样均值
+                # Damit die Figur in der Mitte nicht stört, werden die 4 Ecken bzw. Randbereiche jedes Feldes gemittelt
                 for r in range(8):
                     y1 = int(y + r * step)
                     y2 = int(y + (r + 1) * step)
@@ -43,12 +43,12 @@ def find_board_rect_checkerboard_corr(image):
                         x1 = int(x + c * step)
                         x2 = int(x + (c + 1) * step)
                         
-                        # 采样格子的角隅区域（不受中间棋子遮挡）
+                        # Die Eckbereiche des Feldes abtasten (dort verdeckt die Figur nichts)
                         cell = small_gray[y1:y2, x1:x2]
                         if cell.size == 0:
                             continue
                         ch, cw = cell.shape
-                        # 采样四角各 20%
+                        # Je Ecke 20 % abtasten
                         corner_vals = [
                             cell[0:max(1, int(ch*0.25)), 0:max(1, int(cw*0.25))],
                             cell[0:max(1, int(ch*0.25)), -max(1, int(cw*0.25)):],
@@ -57,8 +57,8 @@ def find_board_rect_checkerboard_corr(image):
                         ]
                         grid_means[r, c] = np.mean([np.mean(cv) for cv in corner_vals])
                         
-                # 计算与 Pattern 的相关性能量
-                # 去除整体平均值
+                # Korrelation mit dem Muster berechnen
+                # Den Gesamtmittelwert abziehen
                 grid_norm = grid_means - np.mean(grid_means)
                 corr = abs(np.sum(grid_norm * pattern))
                 
@@ -72,13 +72,13 @@ def find_board_rect_checkerboard_corr(image):
     y = int(round(y_s * inv_scale))
     size = int(round(size_s * inv_scale))
     
-    # 确保不越界
+    # Innerhalb des Bildes bleiben
     x = max(0, min(img_w - size, x))
     y = max(0, min(img_h - size, y))
     
     return (x, y, x + size, y + size)
 
-# 重新运行并可视化
+# Erneut ausführen und darstellen
 os.makedirs("scratch/debug_board_corr", exist_ok=True)
 for filename in ["duolingo_1.jpeg", "duolingo_2.jpg", "duolingo_3.jpg"]:
     img = cv2.imread(filename)

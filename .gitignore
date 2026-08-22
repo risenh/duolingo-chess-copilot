@@ -6,10 +6,10 @@ __pycache__/
 .system_generated/
 .gradle/
 build/
-android_copilot/.gradle/
-android_copilot/build/
-android_copilot/app/build/
-android_copilot/local.properties
+dulo/.gradle/
+dulo/build/
+dulo/app/build/
+dulo/local.properties
 *.local.properties
 scratch/
 reference/

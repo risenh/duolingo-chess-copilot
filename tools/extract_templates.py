@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import os
 
-# 导入成熟的棋盘定位函数
+# Die bewährte Funktion zur Brettlokalisierung einbinden
 from test_locator_v3 import find_bottom_edge_and_board
 
 def extract_cells(image_path):
@@ -23,13 +23,13 @@ def extract_cells(image_path):
         cells.append(row_cells)
     return cells
 
-# 提取并保存开局时的各标准棋子模板
+# Vorlagen der Standardfiguren aus der Grundstellung schneiden und speichern
 os.makedirs("scratch/templates", exist_ok=True)
 img1 = cv2.imread("duolingo_1.jpeg")
 cells1 = extract_cells("duolingo_1.jpeg")
 
-# duolingo_1 是标准开局，白在下（row 6: 兵, row 7: R N B Q K B N R）
-# 黑在上（row 0: r n b q k b n r, row 1: p）
+# duolingo_1 zeigt die Grundstellung mit Weiß unten (row 6: Bauern, row 7: R N B Q K B N R)
+# und Schwarz oben (row 0: r n b q k b n r, row 1: p)
 pieces_map = {
     'R': cells1[7][0],
     'N': cells1[7][1],
@@ -40,8 +40,8 @@ pieces_map = {
 }
 
 for name, cell in pieces_map.items():
-    # 归一化到 64x64
+    # Auf 64x64 normieren
     resized = cv2.resize(cell, (64, 64))
     cv2.imwrite(f"scratch/templates/{name}.png", resized)
     
-print("成功提取多邻国标准 6 大棋子模板！")
+print("Die Vorlagen der 6 Figurenarten wurden aus dem Duolingo-Brett extrahiert")

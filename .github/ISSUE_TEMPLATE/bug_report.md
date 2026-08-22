@@ -1,22 +1,22 @@
 ---
 name: Bug report
-about: 提交 Bug 报告以帮助我们改进
+about: Einen Fehler melden und damit helfen, die App zu verbessern
 title: '[BUG] '
 labels: bug
 assignees: ''
 
 ---
 
-**设备与系统信息**
-- 设备型号: [例如 Xiaomi 13, Pixel 7]
-- Android 版本: [例如 Android 13 / 14]
-- App 版本 / Commit Hash: [例如 v1.0.0 / commit id]
+**Gerät und System**
+- Gerätemodell: [z. B. Xiaomi 13, Pixel 7]
+- Android-Version: [z. B. Android 13 / 14]
+- App-Version / Commit-Hash: [z. B. v1.0.0 / Commit-ID]
 
-**问题描述**
-简明扼要地描述遇到的异常行为或识别错误。
+**Beschreibung des Fehlers**
+Kurz und genau beschreiben, welches Verhalten oder welche Fehlerkennung auftritt.
 
-**复现截图**
-请上传出现问题时的多邻国棋盘截图或录屏。
+**Screenshot zur Reproduktion**
+Bitte einen Screenshot oder eine Bildschirmaufnahme des Duolingo-Bretts anhängen.
 
-**期望行为**
-清晰描述期望的正常识别结果或行为。
+**Erwartetes Verhalten**
+Klar beschreiben, welches Erkennungsergebnis oder Verhalten erwartet wird.

@@ -4,29 +4,29 @@ import os
 
 def find_bottom_edge_and_board(image):
     """
-    通过扫描棋盘容器底部水平分界线与 8-周期网格自底向上精确锁定棋盘
+    Sperrt das Brett von unten her ein: über die waagerechte Trennlinie am unteren Rand des Brettbereichs und das Gitter mit 8 Perioden
     """
     img_h, img_w = image.shape[:2]
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     
-    # 棋盘宽度在 0.88 * img_w 到 0.98 * img_w
-    # 计算水平投影梯度
+    # Die Brettbreite liegt zwischen 0.88 * img_w und 0.98 * img_w
+    # Waagerechten Projektionsgradienten berechnen
     grad_y = np.abs(cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3))
     
-    # 棋盘的底边 y_bottom 一定在 [0.70 * img_h, 0.98 * img_h] 之间
-    # 棋盘由 8 个高度为 step 的行组成，因此从 y_bottom 往上有 8 条等距线：
+    # Die Unterkante y_bottom liegt immer zwischen 0.70 * img_h und 0.98 * img_h
+    # Das Brett besteht aus 8 Reihen der Höhe step, von y_bottom aus liegen darüber also 8 gleich weit entfernte Linien:
     # y_bottom, y_bottom - step, ..., y_bottom - 8*step
     
     best_score = -1e9
     best_params = None # (size, x, y_bottom)
     
-    # 在原图分辨率或 1/2 分辨率下快速精确搜索
-    # 尺寸范围
+    # Schnelle, genaue Suche in voller oder halber Auflösung
+    # Größenbereich
     for size in range(int(0.85 * img_w), int(0.98 * img_w), 4):
         step = size / 8.0
-        x = (img_w - size) // 2 # 左右对称
+        x = (img_w - size) // 2 # waagerecht mittig
         
-        # y_bottom 搜索范围：从屏幕 0.75 * img_h 到 0.98 * img_h
+        # Suchbereich für y_bottom: von 0.75 * img_h bis 0.98 * img_h
         y_bottom_min = int(0.65 * img_h + size)
         y_bottom_max = min(img_h - 10, int(0.99 * img_h))
         
@@ -35,15 +35,15 @@ def find_bottom_edge_and_board(image):
             if y_top < int(img_h * 0.15):
                 continue
                 
-            # 计算 8x8 格子的水平线边缘能量之和
+            # Kantenenergie der waagerechten Linien des 8x8-Gitters aufsummieren
             h_line_energy = 0.0
-            for i in range(9): # 0 到 8 共 9 条水平线（含顶底）
+            for i in range(9): # 9 waagerechte Linien (0 bis 8, mit Ober- und Unterkante)
                 ly = int(y_top + i * step)
                 if 0 <= ly < img_h:
                     h_line_energy += np.mean(grad_y[max(0, ly-2):min(img_h, ly+3), x:x+size])
                     
-            # 计算 8x8 格子角点棋盘格交替方差
-            # 采样各格角落
+            # Varianz des abwechselnden Musters an den Eckpunkten der 8x8 Felder
+            # Die Ecken jedes Feldes abtasten
             pattern = np.zeros((8, 8), dtype=np.float32)
             grid_means = np.zeros((8, 8), dtype=np.float32)
             for r in range(8):
@@ -57,7 +57,7 @@ def find_bottom_edge_and_board(image):
                     if cell.size == 0:
                         continue
                     ch, cw = cell.shape
-                    # 采样四角
+                    # Die vier Ecken abtasten
                     c_vals = [
                         cell[0:max(1, int(ch*0.15)), 0:max(1, int(cw*0.15))],
                         cell[0:max(1, int(ch*0.15)), -max(1, int(cw*0.15)):],

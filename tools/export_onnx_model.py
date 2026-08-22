@@ -7,9 +7,9 @@ import onnxruntime as ort
 
 class DuolingoChessPieceNet(nn.Module):
     """
-    轻量端侧多邻国棋子分类网络 (DuolingoChessPieceNet)
-    输入: 64 个格子的核心 ROI (64, 1, 32, 32)
-    输出: 
+    Leichtgewichtiges Netz zur Figurenerkennung auf dem Gerät (DuolingoChessPieceNet)
+    Eingabe: die zentrale ROI der 64 Felder (64, 1, 32, 32)
+    Ausgabe:
       1. is_empty_logits (64, 2)
       2. piece_class_logits (64, 6) -> [P, R, N, B, Q, K]
       3. is_white_logits (64, 2)
@@ -17,7 +17,7 @@ class DuolingoChessPieceNet(nn.Module):
     def __init__(self):
         super(DuolingoChessPieceNet, self).__init__()
         
-        # 特征提取卷积层
+        # Faltungsschichten zur Merkmalsextraktion
         self.conv1 = nn.Conv2d(1, 16, kernel_size=3, padding=1)
         self.pool1 = nn.MaxPool2d(2, 2) # 16x16
         self.conv2 = nn.Conv2d(16, 32, kernel_size=3, padding=1)
@@ -25,7 +25,7 @@ class DuolingoChessPieceNet(nn.Module):
         
         self.fc_shared = nn.Linear(32 * 8 * 8, 128)
         
-        # 3 个分支头
+        # 3 Ausgabeköpfe
         self.head_empty = nn.Linear(128, 2)
         self.head_class = nn.Linear(128, 6) # P, R, N, B, Q, K
         self.head_color = nn.Linear(128, 2) # black, white
@@ -45,12 +45,12 @@ class DuolingoChessPieceNet(nn.Module):
         
         return out_empty, out_class, out_color
 
-# 实例化并初始化权重
+# Netz anlegen und Gewichte initialisieren
 os.makedirs("models", exist_ok=True)
 model = DuolingoChessPieceNet()
 model.eval()
 
-# 导出 ONNX 模型
+# ONNX-Modell exportieren
 dummy_input = torch.randn(64, 1, 32, 32, dtype=torch.float32)
 onnx_path = "models/duolingo_chess.onnx"
 
@@ -69,12 +69,12 @@ torch.onnx.export(
     opset_version=14
 )
 
-print(f"成功导出 ONNX 模型至: {onnx_path}")
+print(f"ONNX-Modell exportiert nach: {onnx_path}")
 
-# 使用 onnxruntime 验证加载与推理
+# Laden und Inferenz mit onnxruntime prüfen
 session = ort.InferenceSession(onnx_path)
 test_in = np.random.randn(64, 1, 32, 32).astype(np.float32)
 outputs = session.run(None, {"cell_images": test_in})
 
-print(f"ONNXRuntime 验证成功: 输出数量 = {len(outputs)}")
+print(f"Prüfung mit ONNXRuntime erfolgreich: Anzahl der Ausgaben = {len(outputs)}")
 print(f"out_empty shape: {outputs[0].shape}, out_class shape: {outputs[1].shape}, out_color shape: {outputs[2].shape}")

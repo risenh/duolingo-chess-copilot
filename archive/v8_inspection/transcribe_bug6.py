@@ -7,7 +7,7 @@ import numpy as np
 import glob
 from tools.extract_refined_templates import extract_features_from_cell
 
-template_dir = "android_copilot/app/src/main/assets/templates"
+template_dir = "dulo/app/src/main/assets/templates"
 template_files = glob.glob(os.path.join(template_dir, "*.png"))
 templates = []
 for tf in template_files:

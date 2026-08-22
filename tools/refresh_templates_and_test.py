@@ -97,15 +97,15 @@ TEMPLATE_SOURCES = [
 
 def build_template_bank():
     templates = {}
-    assets_dir = "android_copilot/app/src/main/assets/templates"
+    assets_dir = "dulo/app/src/main/assets/templates"
     os.makedirs(assets_dir, exist_ok=True)
     
-    # 清空旧模板
+    # Alte Vorlagen entfernen
     for f in os.listdir(assets_dir):
         if f.endswith(".png"):
             os.remove(os.path.join(assets_dir, f))
             
-    # 缓存已加载图像与定位结果
+    # Bereits geladene Bilder und Lokalisierungsergebnisse zwischenspeichern
     img_cache = {}
     
     counter = {}
@@ -125,7 +125,7 @@ def build_template_bank():
         cy2 = int(t + (r + 1) * step)
         crop = img[cy1:cy2, cx1:cx2]
         
-        # 保存 48x48 模板到 assets/templates
+        # 48x48-Vorlage nach assets/templates speichern
         idx = counter.get(cls_name, 0)
         counter[cls_name] = idx + 1
         

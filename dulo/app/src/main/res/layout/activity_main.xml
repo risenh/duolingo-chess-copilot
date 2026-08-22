@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#121212"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="DuLo"
+            android:textColor="#00E676"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+
+        <!--
+          Umschalter: an = Dienst läuft, aus = Dienst beendet.
+          Die Schaltfläche ist das Foto von DuLo; ausgeschaltet liegt ein dunkler
+          Schleier darüber, eingeschaltet leuchtet das Bild mit grünem Rahmen.
+        -->
+        <ToggleButton
+            android:id="@+id/btnToggleFloating"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:layout_marginTop="24dp"
+            android:background="@drawable/dulo_umschalter_hintergrund"
+            android:contentDescription="DuLo ein- und ausschalten"
+            android:minHeight="0dp"
+            android:minWidth="0dp"
+            android:text=""
+            android:textOff=""
+            android:textOn="" />
+
+        <TextView
+            android:id="@+id/tvToggleStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="DuLo ist aus – auf das Bild tippen zum Starten"
+            android:textColor="#00E676"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+</ScrollView>

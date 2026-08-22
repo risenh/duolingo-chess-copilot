@@ -5,11 +5,11 @@ import glob
 
 class MultiModalPieceClassifier:
     """
-    多模态多邻国棋子分类器
-    集成了深色主题/浅色主题、黑方/白方的全部 6 类棋子标准特征库
+    Multimodaler Figurenklassifikator für Duolingo-Schach
+    Enthält die Referenzmerkmale aller 6 Figurenarten für helles und dunkles Design sowie für Schwarz und Weiß
     """
     def __init__(self):
-        # 构建各类别的已知样本路径
+        # Pfade der bekannten Beispielbilder je Klasse
         # img1: r0: r,n,b,q,k,b,n,r; r1: p; r6: P; r7: R,N,B,Q,K,B,N,R
         # img2: r0: R,N,B,K,Q,B,N,R; r1: P,P,.,P,P,P,P,P; r3: .,.,P; r6: p; r7: r,n,b,k,q,b,n,r
         # img3: r0: r,n,b,q,k,b,n,r; r1: p; r6: P; r7: R,N,B,Q,K,B,N,R
@@ -32,7 +32,7 @@ class MultiModalPieceClassifier:
             ],
             'Q': [
                 "scratch/all_cells/img1/r7_c3.png",
-                "scratch/all_cells/img2/r0_c4.png", # 注意：img2中王在c3，后在c4
+                "scratch/all_cells/img2/r0_c4.png", # Achtung: in img2 steht der König auf c3 und die Dame auf c4
                 "scratch/all_cells/img3/r7_c3.png"
             ],
             'K': [
@@ -45,7 +45,7 @@ class MultiModalPieceClassifier:
                 "scratch/all_cells/img2/r1_c0.png", "scratch/all_cells/img2/r3_c2.png",
                 "scratch/all_cells/img3/r6_c0.png", "scratch/all_cells/img3/r6_c4.png"
             ],
-            # 黑棋样本
+            # Beispiele für schwarze Figuren
             'r': [
                 "scratch/all_cells/img1/r0_c0.png", "scratch/all_cells/img1/r0_c7.png",
                 "scratch/all_cells/img2/r7_c0.png", "scratch/all_cells/img2/r7_c7.png",
@@ -88,11 +88,11 @@ class MultiModalPieceClassifier:
             self.templates[piece_type] = feats
 
     def _get_feature(self, cell_img):
-        # 归一化为 48x48
+        # Auf 48x48 normieren
         resized = cv2.resize(cell_img, (48, 48))
         gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
         
-        # 提取中心 10%~90% 区域，去除边缘网格线
+        # Nur den Bereich 10 % bis 90 % verwenden, das entfernt die Gitterlinien am Rand
         gx = cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)
         gy = cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3)
         mag = np.sqrt(gx**2 + gy**2)
@@ -101,11 +101,11 @@ class MultiModalPieceClassifier:
         mask[6:42, 6:42] = 1.0
         mag = mag * mask
         
-        # 梯度能量归一化
+        # Gradientenenergie normieren
         norm = np.linalg.norm(mag)
         mag_norm = mag / (norm + 1e-6)
         
-        # 灰度中心对比特征
+        # Helligkeitskontrast in der Feldmitte
         center_gray = gray[10:38, 10:38]
         
         return {
@@ -119,28 +119,28 @@ class MultiModalPieceClassifier:
     def classify(self, cell_img):
         feat = self._get_feature(cell_img)
         
-        # 1. 空格检测：内部变化极小
+        # 1. Leeres Feld erkennen: im Inneren ändert sich fast nichts
         if feat['energy'] < 100 or feat['center_std'] < 6.5:
             return '.'
             
-        # 2. 与各类别模版比对余弦相似度
+        # 2. Kosinus-Ähnlichkeit mit den Vorlagen jeder Klasse
         best_type = '.'
         best_sim = -1.0
         
         for p_type, feat_list in self.templates.items():
             for t_feat in feat_list:
-                # 梯度余弦相似度
+                # Kosinus-Ähnlichkeit der Gradienten
                 cos_sim = np.sum(feat['mag_norm'] * t_feat['mag_norm'])
                 
-                # 亮度匹配惩罚（白棋与黑棋的亮度区分）
-                # 如果一个是白棋（大写），一个是黑棋（小写），中心均值相差很大时进行惩罚
+                # Abzug bei unpassender Helligkeit (trennt weiße von schwarzen Figuren)
+                # Ist die eine Seite weiß (Großbuchstabe) und die andere schwarz (Kleinbuchstabe), gibt eine große Differenz der Mittelwerte Abzug
                 is_t_white = p_type.isupper()
-                # 粗略判断当前格是否较亮
+                # Grobe Einschätzung, ob das Feld eher hell ist
                 is_f_white = feat['center_mean'] > 120
                 
                 penalty = 0.0
                 if is_t_white != is_f_white:
-                    # 降低异色匹配得分
+                # Treffer mit der falschen Farbe abwerten
                     penalty = 0.15
                     
                 final_sim = cos_sim - penalty
@@ -151,4 +151,4 @@ class MultiModalPieceClassifier:
                     
         return best_type
 
-print("MultiModalPieceClassifier 模块加载成功！")
+print("Das Modul MultiModalPieceClassifier wurde geladen")

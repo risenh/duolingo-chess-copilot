@@ -9,14 +9,14 @@ from tools.test_full_pipeline_v2 import fast_sat_locate_board
 from tools.extract_refined_templates import extract_features_from_cell
 from tools.validate_all_fen import sanitize_board_py, build_fen_py
 
-# bug_11~15 真机错误建议帧的格子级取证 (仅诊断输出, 不作为质量门禁, 不阻断构建)
-# 用途: 为 A 类误分类 (象->马, 车->象) 与 B 类漏子提供每格 Top-2 相似度证据
+# Zellenweise Forensik der fehlerhaften Frames bug_11~15 vom Gerät (nur Diagnose, kein Qualitätsgatter, blockiert keinen Build)
+# Zweck: Belege je Feld über die zwei besten Treffer für Fehlklassifikationen (Läufer->Springer, Turm->Läufer) und übersehene Figuren
 BUG_FRAMES = ["bug_11.jpg", "bug_12.jpg", "bug_13.jpg", "bug_14.jpg", "bug_15.jpg"]
 
 FILES = "abcdefgh"
 
 def square_name(row, col, is_white_persp):
-    """按视角把 (row, col) 屏幕格换算成标准棋盘坐标"""
+    """Rechnet ein Bildschirmfeld (row, col) je nach Perspektive in Brettkoordinaten um"""
     if is_white_persp:
         return FILES[col] + str(8 - row)
     else:
@@ -25,16 +25,16 @@ def square_name(row, col, is_white_persp):
 def inspect_frame(path, templates):
     img = cv2.imread(path)
     if img is None:
-        print(f"[ERROR] 无法读取图像: {path}")
+        print(f"[ERROR] Bild konnte nicht gelesen werden: {path}")
         return
 
     print(f"\n=================== {path} ===================")
     try:
         l, t, r, b = fast_sat_locate_board(img)
     except Exception as e:
-        print(f"[ERROR] 棋盘定位失败: {e}")
+        print(f"[ERROR] Brettlokalisierung fehlgeschlagen: {e}")
         return
-    print(f"棋盘定位: L={l}, T={t}, R={r}, B={b}")
+    print(f"Brett lokalisiert: L={l}, T={t}, R={r}, B={b}")
     step = (r - l) / 8.0
 
     occupied = []
@@ -61,17 +61,17 @@ def inspect_frame(path, templates):
                 occupied.append((row, col, f, best_cls, best_sim, second_cls, second_sim))
 
     if len(occupied) < 4:
-        print(f"[INFO] 占位不足 4 ({len(occupied)}), 门禁将拦截")
+        print(f"[INFO] Weniger als 4 belegte Felder ({len(occupied)}), das Gatter weist ab")
         return
 
     sims = sorted([item[4] for item in occupied])
     n = len(sims)
     median_sim = sims[n // 2] if n % 2 == 1 else (sims[n // 2 - 1] + sims[n // 2]) / 2.0
-    print(f"占位: {len(occupied)} | MedianSim: {median_sim:.3f} (门禁 0.520)")
+    print(f"Belegt: {len(occupied)} | MedianSim: {median_sim:.3f} (Gatter 0.520)")
     if median_sim < 0.52:
-        print("[INFO] MedianSim 低于门禁, 实机将被拦截")
+        print("[INFO] MedianSim unter dem Gatter, auf dem Gerät würde abgewiesen")
 
-    # 2-Means 黑白分营 (与门禁脚本/Kotlin 完全对齐)
+    # 2-Means-Clustering für Schwarz und Weiß (deckungsgleich mit dem Gatterskript und mit Kotlin)
     raw_board = [['.' for _ in range(8)] for _ in range(8)]
     means = [item[2]['center_mean'] for item in occupied]
     min_val, max_val = min(means), max(means)
@@ -99,31 +99,31 @@ def inspect_frame(path, templates):
     is_white_persp = bot_w >= bot_b
 
     board_fen, full_fen = build_fen_py(sanitized, is_white_persp)
-    print(f"视角: {'执白' if is_white_persp else '执黑'}")
-    print(f"检测 Board FEN: {board_fen}")
-    print(f"检测 Full  FEN: {full_fen}")
+    print(f"Perspektive: {'Weiß' if is_white_persp else 'Schwarz'}")
+    print(f"Erkanntes Board-FEN: {board_fen}")
+    print(f"Erkanntes volles FEN: {full_fen}")
 
-    # 每格 Top-2 证据表 (低余量格子 = 误分类嫌疑)
-    print("\n格子级 Top-2 证据 (余量 = Top1 - Top2, 低余量为误分类嫌疑格):")
-    print(f"  {'坐标':<6}{'Top1':<5}{'Sim1':<9}{'Top2':<5}{'Sim2':<9}{'余量':<8}{'亮度均值'}")
+    # Tabelle der zwei besten Treffer je Feld (geringer Abstand deutet auf Fehlklassifikation)
+    print("\nZwei beste Treffer je Feld (Abstand = Top1 - Top2, ein kleiner Abstand ist verdächtig):")
+    print(f"  {'Feld':<6}{'Top1':<5}{'Sim1':<9}{'Top2':<5}{'Sim2':<9}{'Abstand':<8}{'Helligkeit'}")
     for r_idx, c_idx, f, best_cls, best_sim, second_cls, second_sim in sorted(occupied):
         color_mark = raw_board[r_idx][c_idx]
         margin = best_sim - second_sim
-        flag = " <-- 低余量" if margin < 0.05 else ""
+        flag = " <-- geringer Abstand" if margin < 0.05 else ""
         print(f"  {square_name(r_idx, c_idx, is_white_persp):<6}{best_cls}({color_mark})"
               f"  {best_sim:<9.4f}{second_cls:<5}{second_sim:<9.4f}{margin:<8.4f}{f['center_mean']:.1f}{flag}")
 
-    # 空格清单 (B 类漏子取证: 对照实盘确认哪些有子格被误判为空)
+    # Liste der leeren Felder (Beleg für übersehene Figuren: Abgleich mit dem echten Brett)
     empties = []
     occ_set = {(item[0], item[1]) for item in occupied}
     for row in range(8):
         for col in range(8):
             if (row, col) not in occ_set:
                 empties.append(square_name(row, col, is_white_persp))
-    print(f"\n被判为空的格子 ({len(empties)}): {' '.join(empties)}")
+    print(f"\nAls leer erkannte Felder ({len(empties)}): {' '.join(empties)}")
 
 def main():
-    template_dir = "android_copilot/app/src/main/assets/templates"
+    template_dir = "dulo/app/src/main/assets/templates"
     template_files = glob.glob(os.path.join(template_dir, "*.png"))
     templates = []
     for tf in template_files:
@@ -139,14 +139,14 @@ def main():
     frames = sys.argv[1:] if len(sys.argv) > 1 else BUG_FRAMES
     for bf in frames:
         if not os.path.exists(bf):
-            print(f"[ERROR] 取证帧缺失: {bf} (应纳入版本控制)")
+            print(f"[ERROR] Frame fehlt: {bf} (gehört in die Versionsverwaltung)")
             continue
         try:
             inspect_frame(bf, templates)
         except Exception as e:
-            print(f"[ERROR] {bf} 取证异常: {e}")
+            print(f"[ERROR] Fehler bei {bf}: {e}")
 
-    print("\n[INFO] 取证输出完毕 (本脚本仅诊断, 不作为质量门禁)")
+    print("\n[INFO] Forensik abgeschlossen (nur Diagnose, kein Qualitätsgatter)")
 
 if __name__ == '__main__':
     main()

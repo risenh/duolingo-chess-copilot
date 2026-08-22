@@ -15,7 +15,7 @@ for filename in ["duolingo_test_1.jfif", "duolingo_test_2.jfif", "duolingo_test_
         l, t, r, b = find_bottom_edge_and_board(img)
         print(f"Board rect: L={l}, T={t}, R={r}, B={b}, Size={r-l}x{b-t}")
         
-        # 绘制网格
+        # Gitter zeichnen
         vis = img.copy()
         cv2.rectangle(vis, (l, t), (r, b), (0, 255, 0), 2)
         step = (r - l) / 8.0
@@ -24,7 +24,7 @@ for filename in ["duolingo_test_1.jfif", "duolingo_test_2.jfif", "duolingo_test_
             cv2.line(vis, (l, int(t + i * step)), (r, int(t + i * step)), (0, 255, 0), 1)
         cv2.imwrite(f"scratch/debug_test_set/{filename}_board.png", vis)
         
-        # 提取格子并识别
+        # Felder schneiden und erkennen
         cells_8x8 = []
         for row in range(8):
             row_cells = []

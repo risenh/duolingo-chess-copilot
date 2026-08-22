@@ -5,12 +5,12 @@ from test_locator_v3 import find_bottom_edge_and_board
 
 class DuolingoPieceClassifier:
     """
-    多邻国 2D 棋子形状指纹分类器
-    通过消除颜色背景，提取前景形态掩模与几何特征（纵横比、重心、上中下轮廓线宽度分布）
-    实现对 6 种棋子（P, N, B, R, Q, K）的 100% 极速鲁棒识别
+    Klassifikator für die Form der 2D-Figuren in Duolingo-Schach
+    Blendet Farbe und Hintergrund aus und gewinnt aus der Vordergrundmaske geometrische Merkmale
+    (Seitenverhältnis, Schwerpunkt, Breitenverlauf über oben, Mitte und unten) zur Erkennung der 6 Figurenarten (P, N, B, R, Q, K)
     """
     def __init__(self):
-        # 加载基础模板并生成标准形状特征指纹
+        # Grundvorlagen laden und daraus die Referenzmerkmale bilden
         self.templates = {}
         for name in ['P', 'R', 'N', 'B', 'Q', 'K']:
             path = f"scratch/templates/{name}.png"
@@ -20,25 +20,25 @@ class DuolingoPieceClassifier:
 
     def _extract_shape_feature(self, cell_img):
         """
-        提取单个格子的形状特征向量
-        1. 归一化为 48x48
-        2. 计算中心区域的 Sobel 梯度能量图 (48x48)
-        3. 计算水平剖面投影 (48) 和垂直剖面投影 (48)
+        Merkmalsvektor eines einzelnen Feldes bestimmen
+        1. Auf 48x48 normieren
+        2. Sobel-Gradientenenergie der Zentrumsregion berechnen (48x48)
+        3. Waagerechtes (48) und senkrechtes (48) Profil berechnen
         """
         resized = cv2.resize(cell_img, (48, 48))
         gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
         
-        # 使用 Sobel 提取边缘结构
+        # Kantenstruktur per Sobel gewinnen
         gx = cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)
         gy = cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3)
         mag = np.sqrt(gx**2 + gy**2)
         
-        # 棋子主要位于中心 (10%~90%) 区域，消除外围网格线干扰
+        # Die Figur liegt im Bereich 10 % bis 90 %, das blendet die Gitterlinien am Rand aus
         mask = np.zeros_like(mag)
         mask[5:43, 5:43] = 1.0
         mag_core = mag * mask
         
-        # 归一化
+        # Normieren
         norm = np.linalg.norm(mag_core)
         if norm > 1e-3:
             mag_core_norm = mag_core / norm
@@ -61,14 +61,14 @@ class DuolingoPieceClassifier:
 
     def classify_cell(self, cell_img, is_white_board_color):
         """
-        判定单个格子：
-        返回: (piece_char or '.', is_white_piece)
-        例如: ('P', True) 为白兵, ('n', False) 为黑马, ('.', None) 为空格
+        Ein einzelnes Feld bestimmen:
+        Rückgabe: (piece_char oder '.', is_white_piece)
+        Beispiele: ('P', True) weißer Bauer, ('n', False) schwarzer Springer, ('.', None) leeres Feld
         """
         feat = self._extract_shape_feature(cell_img)
         
-        # 1. 判断是否为空格
-        # 空格的内部能量非常低（通常只有纯底色）
+        # 1. Prüfen, ob das Feld leer ist
+        # Ein leeres Feld hat im Inneren sehr wenig Energie (meist nur die Feldfarbe)
         gray = feat['gray']
         center_roi = gray[12:36, 12:36]
         std_val = np.std(center_roi)
@@ -76,37 +76,37 @@ class DuolingoPieceClassifier:
         if feat['energy'] < 120 or std_val < 7.0:
             return '.', None
             
-        # 2. 与 6 个标准棋子模板计算相似度（余弦相似度 + 投影相似度）
+        # 2. Ähnlichkeit mit den 6 Vorlagen berechnen (Kosinus- und Profilähnlichkeit)
         best_type = 'P'
         best_sim = -1.0
         
         for name, t_feat in self.templates.items():
-            # 矩阵相关性
+            # Korrelation der Matrizen
             cos_sim = np.sum(feat['mag'] * t_feat['mag'])
-            # 投影相关性
+            # Korrelation der Profile
             h_sim = np.dot(feat['h_proj'], t_feat['h_proj'])
             v_sim = np.dot(feat['v_proj'], t_feat['v_proj'])
             
             total_sim = cos_sim * 0.6 + h_sim * 0.2 + v_sim * 0.2
             
-            # 针对 King (王) 的特殊胸口十字特征增强
-            # 王的中心十字在 y: 16~30, x: 16~30 处有很高的局部边缘响应
+            # Zusätzliches Merkmal für den König: das Kreuz auf der Brust
+            # Das Kreuz erzeugt bei y: 16~30, x: 16~30 eine hohe lokale Kantenantwort
             if total_sim > best_sim:
                 best_sim = total_sim
                 best_type = name
                 
-        # 3. 判断是黑方还是白方棋子
-        # 棋子主体像素的平均亮度与周围背景亮度的对比
+        # 3. Bestimmen, ob die Figur schwarz oder weiß ist
+        # Verglichen wird die mittlere Helligkeit der Figur mit der des umgebenden Hintergrunds
         corner_mean = (np.mean(gray[:8, :8]) + np.mean(gray[:8, -8:]) + 
                        np.mean(gray[-8:, :8]) + np.mean(gray[-8:, -8:])) / 4.0
         center_mean = np.mean(center_roi)
         
-        # 在多邻国中，无论深色还是浅色主题：
-        # 白棋（浅色棋子）的中心主体通常显著发亮（亮度高，> 140 或明显高于黑棋）
-        # 黑棋（深色棋子）的中心主体通常较暗（< 100）
+        # In Duolingo gilt in hellem wie dunklem Design:
+        # helle Figuren sind in der Mitte deutlich heller (> 140 oder klar heller als die dunklen)
+        # dunkle Figuren sind in der Mitte deutlich dunkler (< 100)
         is_white = center_mean > 120 or (center_mean - corner_mean > 15)
         
         piece_symbol = best_type if is_white else best_type.lower()
         return piece_symbol, is_white
 
-print("DuolingoPieceClassifier 定义完成！")
+print("DuolingoPieceClassifier ist definiert")

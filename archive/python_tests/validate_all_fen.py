@@ -9,12 +9,12 @@ from tools.robust_classifier import UltraRobustDuolingoClassifier
 
 def sanitize_board_py(board):
     res = [list(row) for row in board]
-    # 1. 禁兵 rank 1 / 8
+    # 1. Kein Bauer auf Reihe 1 oder 8
     for c in range(8):
         if res[0][c] in ('P', 'p'): res[0][c] = '.'
         if res[7][c] in ('P', 'p'): res[7][c] = '.'
         
-    # 2. 数量上限约束
+    # 2. Obergrenzen der Figurenanzahl
     piece_counts = {}
     max_limits = {'K': 1, 'k': 1, 'Q': 1, 'q': 1, 'R': 2, 'r': 2, 'B': 2, 'b': 2, 'N': 2, 'n': 2, 'P': 8, 'p': 8}
     for r in range(8):
@@ -34,7 +34,7 @@ def sanitize_board_py(board):
                         break
                 res[r][c] = fallback
                 
-    # 3. 双王唯一性保证
+    # 3. Eindeutigkeit beider Könige
     white_kings = sum(row.count('K') for row in res)
     black_kings = sum(row.count('k') for row in res)
     
@@ -62,7 +62,7 @@ def sanitize_board_py(board):
         if not placed:
             res[0][4] = 'k'
             
-    # 4. 二次检查
+    # 4. Zweitprüfung
     final_counts = {}
     for r in range(8):
         for c in range(8):
@@ -124,7 +124,7 @@ def validate_all():
         raw_board = classifier.classify_board(cells)
         sanitized = sanitize_board_py(raw_board)
         
-        # 视角判断
+        # Perspektive bestimmen
         top_white = sum(1 for row in sanitized[:2] for p in row if p.isupper())
         top_black = sum(1 for row in sanitized[:2] for p in row if p.islower())
         bot_white = sum(1 for row in sanitized[6:] for p in row if p.isupper())
@@ -139,7 +139,7 @@ def validate_all():
         print(f"Board FEN: {board_fen}")
         print(f"Full FEN:  {full_fen}")
         
-        # Lichess 合法性校验
+        # Prüfung nach den Lichess-Regeln
         ranks = board_fen.split('/')
         if len(ranks) != 8:
             print(f"  [ERROR] Rank count != 8: {len(ranks)}")

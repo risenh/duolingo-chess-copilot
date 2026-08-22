@@ -16,10 +16,10 @@ SEARCH_DIRS = [
 
 def resolve_image_path(image_name_or_path: str) -> str:
     """
-    解析图片路径：
-    1. 若已是有效绝对路径或相对路径，直接返回规范路径；
-    2. 若只是文件名，自动在 test_images/benchmarks, test_images/bugs, test_images/calibration 中检索；
-    3. 若未找到，返回原始传入值。
+    Bildpfad auflösen:
+    1. Ist der Pfad bereits gültig (absolut oder relativ), wird er normalisiert zurückgegeben;
+    2. bei einem reinen Dateinamen wird in test_images/benchmarks, test_images/bugs und test_images/calibration gesucht;
+    3. wird nichts gefunden, kommt der ursprüngliche Wert zurück.
     """
     if os.path.isabs(image_name_or_path) and os.path.exists(image_name_or_path):
         return image_name_or_path
@@ -27,14 +27,14 @@ def resolve_image_path(image_name_or_path: str) -> str:
     if os.path.exists(image_name_or_path):
         return os.path.abspath(image_name_or_path)
     
-    # 提取基本文件名进行检索
+    # Zum Suchen nur den Dateinamen verwenden
     base_name = os.path.basename(image_name_or_path)
     for search_dir in SEARCH_DIRS:
         candidate = os.path.join(search_dir, base_name)
         if os.path.exists(candidate):
             return candidate
             
-    # 深度递归检索 test_images
+    # Rekursiv unterhalb von test_images suchen
     if os.path.exists(TEST_IMAGES_DIR):
         for root, _, files in os.walk(TEST_IMAGES_DIR):
             if base_name in files:
@@ -44,7 +44,7 @@ def resolve_image_path(image_name_or_path: str) -> str:
 
 def load_image(image_name_or_path: str) -> Optional[np.ndarray]:
     """
-    安全读取图片，支持 Windows 平台下的中文与特殊字符路径。
+    Bild sicher einlesen, auch bei Pfaden mit Sonderzeichen unter Windows.
     """
     resolved_path = resolve_image_path(image_name_or_path)
     if not os.path.exists(resolved_path):

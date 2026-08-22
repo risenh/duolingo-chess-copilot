@@ -1,6 +1,6 @@
 import os
 
-arm64_so = r"d:\project\chess\android_copilot\app\src\main\jniLibs\arm64-v8a\libstockfish.so"
+arm64_so = r"d:\project\chess\dulo\app\src\main\jniLibs\arm64-v8a\libstockfish.so"
 with open(arm64_so, "rb") as f:
     header = f.read(64)
 

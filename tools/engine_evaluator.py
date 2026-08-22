@@ -5,14 +5,14 @@ import time
 
 def evaluate_fen_cloud(fen):
     """
-    使用官方极速 Stockfish Cloud API 获取最佳走法与胜率评估分
+    Holt den besten Zug und die Bewertung über die offizielle Stockfish-Cloud-API
     """
     encoded_fen = urllib.parse.quote(fen)
     url = f"https://lichess.org/api/cloud-eval?fen={encoded_fen}"
     
     req = urllib.request.Request(
         url,
-        headers={'User-Agent': 'DuolingoChessCopilot/1.0'}
+        headers={'User-Agent': 'DuLo/1.0'}
     )
     
     try:

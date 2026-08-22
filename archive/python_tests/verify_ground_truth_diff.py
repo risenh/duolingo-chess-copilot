@@ -13,7 +13,7 @@ from tools.extract_refined_templates import extract_features_from_cell
 from tests.python.validate_all_fen import sanitize_board_py, build_fen_py
 from tools.image_utils import resolve_image_path, load_image
 
-# 人工逐格严格核实背书的真机正样本 Ground Truth
+# Von Hand feldweise geprüfte Sollwerte echter Aufnahmen vom Gerät
 POSITIVE_GROUND_TRUTH_DB = {
     "duolingo_1.jpeg": {
         "perspective": True, # White
@@ -52,11 +52,11 @@ POSITIVE_GROUND_TRUTH_DB = {
     }
 }
 
-# 必须被门禁 100% 拦截的非棋盘 UI 负样本 (实测 MedianSim <= 0.456)
+# Negativbeispiele ohne Brett, die das Gatter zu 100 % abweisen muss (gemessen MedianSim <= 0.456)
 NEGATIVE_SAMPLES = [
-    "bug_1.jpg", # 多邻国主页路线图 (MedianSim=0.383)
-    "bug_2.jpg", # 多邻国对战大厅列表 (MedianSim=0.366)
-    "bug_5.jpg", # 本 App 离线诊断结果 UI (MedianSim=0.456)
+    "bug_1.jpg", # Duolingo-Startseite mit dem Lernpfad (MedianSim=0.383)
+    "bug_2.jpg", # Liste der Duolingo-Lobby (MedianSim=0.366)
+    "bug_5.jpg", # Diagnoseansicht dieser App (MedianSim=0.456)
 ]
 
 def run_detection_pipeline(img, templates):
@@ -91,7 +91,7 @@ def run_detection_pipeline(img, templates):
                         best_cls = t_cls
                 occupied.append((row, col, f, best_cls, best_sim))
                 
-    # 语义质量门禁 (与 Kotlin 完全对齐)
+    # Semantisches Qualitätsgatter (deckungsgleich mit Kotlin)
     if len(occupied) < 4:
         return None
         
@@ -133,7 +133,7 @@ def run_detection_pipeline(img, templates):
     return board_fen, full_fen, is_white_persp
 
 def run_ground_truth_diff_verification():
-    template_dir = os.path.join(PROJECT_ROOT, "android_copilot/app/src/main/assets/templates")
+    template_dir = os.path.join(PROJECT_ROOT, "dulo/app/src/main/assets/templates")
     template_files = glob.glob(os.path.join(template_dir, "*.png"))
     templates = []
     for tf in template_files:
@@ -149,8 +149,8 @@ def run_ground_truth_diff_verification():
         
     all_matched = True
     
-    # 1. 验证负样本 (必须被门禁 100% 拦截，返回 None)
-    print("\n=================== 负样本门禁拦截测试 (Negative Gating) ===================")
+    # 1. Negativbeispiele prüfen (müssen zu 100 % abgewiesen werden, Rückgabe None)
+    print("\n=================== Abweisung der Negativbeispiele (Negative Gating) ===================")
     for neg_img in NEGATIVE_SAMPLES:
         neg_path = resolve_image_path(neg_img)
         if not os.path.exists(neg_path):
@@ -160,13 +160,13 @@ def run_ground_truth_diff_verification():
         img = load_image(neg_path)
         res = run_detection_pipeline(img, templates)
         if res is None:
-            print(f"  --> [PASS] {neg_img} (非棋盘画面) 成功被语义门禁拦截 (返回 None)")
+            print(f"  --> [PASS] {neg_img} (kein Brett) wurde vom Qualitätsgatter abgewiesen (Rückgabe None)")
         else:
-            print(f"  --> [FAIL] {neg_img} 误放行！检测结果: {res[0]}")
+            print(f"  --> [FAIL] {neg_img} kam durch. Erkanntes Ergebnis: {res[0]}")
             all_matched = False
             
-    # 2. 验证正样本 (必须 100% 通过门禁且 64 格与 Ground Truth 吻合)
-    print("\n=================== 正样本 Ground Truth 逐格比对 ===================")
+    # 2. Positivbeispiele prüfen (müssen das Gatter passieren und in allen 64 Feldern zum Sollwert passen)
+    print("\n=================== Feldweiser Abgleich der Positivbeispiele ===================")
     verified_count = 0
     for img_name, gt in POSITIVE_GROUND_TRUTH_DB.items():
         pos_path = resolve_image_path(img_name)
@@ -178,7 +178,7 @@ def run_ground_truth_diff_verification():
         img = load_image(pos_path)
         res = run_detection_pipeline(img, templates)
         if res is None:
-            print(f"[FAIL] 正样本 {img_name} 被语义门禁误杀！")
+            print(f"[FAIL] Das Positivbeispiel {img_name} wurde vom Qualitätsgatter abgewiesen")
             all_matched = False
             continue
             
@@ -190,17 +190,17 @@ def run_ground_truth_diff_verification():
         print(f"  Expected Board FEN: {expected_fen}")
         
         if board_fen == expected_fen:
-            print("  --> [MATCH] 64格逐格比对 100% 吻合！差异数: 0")
+            print("  --> [MATCH] Alle 64 Felder stimmen überein, 0 Abweichungen")
             verified_count += 1
         else:
-            print(f"  --> [DIFF MISMATCH] 不吻合！")
+            print(f"  --> [DIFF MISMATCH] Abweichungen gefunden")
             all_matched = False
 
     if not all_matched or verified_count != len(POSITIVE_GROUND_TRUTH_DB):
-        print(f"\n[FAIL] 门禁与 Ground Truth 校验失败！正样本通过数: {verified_count}/{len(POSITIVE_GROUND_TRUTH_DB)}")
+        print(f"\n[FAIL] Gatter und Sollwerte stimmen nicht überein. Bestandene Positivbeispiele: {verified_count}/{len(POSITIVE_GROUND_TRUTH_DB)}")
         sys.exit(1)
     else:
-        print(f"\n[SUCCESS] 全部负样本 100% 成功拦截，全部 {verified_count} 款正样本 64 格 Ground Truth 100% 吻合！")
+        print(f"\n[SUCCESS] Alle Negativbeispiele wurden abgewiesen und alle {verified_count} Positivbeispiele stimmen in allen 64 Feldern mit den Sollwerten überein")
 
 if __name__ == '__main__':
     run_ground_truth_diff_verification()

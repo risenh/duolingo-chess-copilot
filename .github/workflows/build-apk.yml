@@ -1,4 +1,4 @@
-name: Build Duolingo Chess Copilot APK
+name: DuLo APK bauen
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ master, main ]
   workflow_dispatch:
   
-# --- 新增并发控制 ---
+# --- Nebenläufigkeit: nur ein Lauf je Branch ---
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -19,9 +19,9 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
-          # NNUE 网络已迁入 Git LFS，必须显式拉取真实文件，否则 APK 会打进指针文件
+          # Das NNUE-Netz liegt in Git LFS und muss ausdrücklich geholt werden, sonst landet nur die Zeigerdatei im APK
           lfs: true
 
       - name: Set up JDK 17
@@ -33,36 +33,36 @@ jobs:
 
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
 
       - name: Grant execute permission for gradlew
-        working-directory: android_copilot
+        working-directory: dulo
         run: |
           if [ ! -f "gradlew" ]; then
             gradle wrapper
           fi
           chmod +x gradlew
 
-      - name: Verify LFS Assets Materialized (响亮失败门禁)
+      - name: LFS-Dateien prüfen (Abbruch mit deutlicher Meldung)
         run: |
-          NNUE=android_copilot/app/src/main/assets/nnue/nn-5af11540bbfe.nnue
+          NNUE=dulo/app/src/main/assets/nnue/nn-5af11540bbfe.nnue
           SIZE=$(stat -c%s "$NNUE")
           echo "NNUE size: $SIZE bytes"
           if [ "$SIZE" -lt 10000000 ]; then
-            echo "::error::NNUE 文件疑似 LFS 指针未实体化 (${SIZE} bytes)，APK 将携带无效网络！"
+            echo "::error::Die NNUE-Datei ist vermutlich nur ein LFS-Zeiger (${SIZE} Bytes), das APK würde ein unbrauchbares Netz enthalten"
             head -c 200 "$NNUE"
             exit 1
           fi
 
       - name: Run Unit Tests & Build Debug APK
-        working-directory: android_copilot
+        working-directory: dulo
         run: |
           ./gradlew test --stacktrace
           ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: Duolingo-Chess-Copilot-APK
-          path: android_copilot/app/build/outputs/apk/debug/*.apk
+          name: DuLo-APK
+          path: dulo/app/build/outputs/apk/debug/*.apk
           retention-days: 14

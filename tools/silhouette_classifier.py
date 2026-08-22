@@ -4,15 +4,15 @@ import os
 
 class RobustSilhouetteClassifier:
     """
-    基于前景轮廓掩模 (Silhouette) + 边缘金字塔的多尺度棋子分类器
-    在 36px 极低分辨率和 155px 高清下均能保持极高鲁棒性
+    Mehrskaliger Figurenklassifikator über die Vordergrundmaske (Silhouette) und eine Kantenpyramide
+    Bleibt sowohl bei 36px als auch bei 155px Kantenlänge zuverlässig
     """
     def __init__(self):
-        # 加载标准样本并提取纯形态轮廓
+        # Referenzbeispiele laden und daraus die reinen Umrisse gewinnen
         self.classes = ['P', 'R', 'N', 'B', 'Q', 'K']
         self.templates = {c: [] for c in self.classes}
         
-        # 收集来自各样本的纯形态
+        # Umrisse aus allen Beispielen sammeln
         sample_paths = {
             'P': ["scratch/all_cells/img1/r6_c0.png", "scratch/all_cells/img1/r6_c2.png", "scratch/all_cells/img3/r6_c0.png"],
             'R': ["scratch/all_cells/img1/r7_c0.png", "scratch/all_cells/img1/r7_c7.png", "scratch/all_cells/img3/r7_c0.png"],
@@ -29,30 +29,30 @@ class RobustSilhouetteClassifier:
                     self.templates[cls_name].append(self._extract_silhouette(img))
 
     def _extract_silhouette(self, cell_img):
-        # 统一缩放到 36x36 (匹配低分辨率基准)
+        # Einheitlich auf 36x36 skalieren (entspricht der niedrigsten Auflösung)
         resized = cv2.resize(cell_img, (36, 36))
         gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
         
-        # 截取中心 20%~80% 核心区域 (约 7:29)
+        # Kernbereich von 20 % bis 80 % schneiden (etwa 7:29)
         core = gray[7:29, 7:29]
         
-        # 计算局部四角背景均值
+        # Mittleren Hintergrund aus den vier Ecken bestimmen
         ch, cw = core.shape
         bg_val = (np.mean(core[:4, :4]) + np.mean(core[:4, -4:]) + 
                   np.mean(core[-4:, :4]) + np.mean(core[-4:, -4:])) / 4.0
                   
-        # 前景差分
+        # Differenz zum Vordergrund
         diff = np.abs(core.astype(np.float32) - bg_val)
         
-        # 归一化前景轮廓
+        # Umriss normieren
         norm = np.linalg.norm(diff)
         diff_norm = diff / (norm + 1e-5)
         
-        # 水平轮廓宽度剖面 (22)
+        # Waagerechtes Breitenprofil des Umrisses (22)
         h_profile = np.sum(diff_norm, axis=1)
         h_profile /= (np.linalg.norm(h_profile) + 1e-5)
         
-        # 垂直剖面 (22)
+        # Senkrechtes Profil (22)
         v_profile = np.sum(diff_norm, axis=0)
         v_profile /= (np.linalg.norm(v_profile) + 1e-5)
         
@@ -68,12 +68,12 @@ class RobustSilhouetteClassifier:
     def classify_board(self, cells_8x8):
         feats = [[self._extract_silhouette(cells_8x8[r][c]) for c in range(8)] for r in range(8)]
         
-        # 1. 判定非空格子
+        # 1. Besetzte Felder bestimmen
         occupied = []
         for r in range(8):
             for c in range(8):
                 f = feats[r][c]
-                # 空格内部差分能量极低
+        # Bei einem leeren Feld ist die Differenzenergie im Inneren sehr klein
                 if f['std'] < 5.0 or f['energy'] < 1200:
                     continue
                     
@@ -81,7 +81,7 @@ class RobustSilhouetteClassifier:
                 best_sim = -1e9
                 for cls_name, t_list in self.templates.items():
                     for t in t_list:
-                        # 2D 轮廓相关度 + 剖面投影相关度
+                        # Korrelation des 2D-Umrisses und der Profile
                         sim_2d = np.sum(f['diff_norm'] * t['diff_norm'])
                         sim_h = np.dot(f['h_prof'], t['h_prof'])
                         sim_v = np.dot(f['v_prof'], t['v_prof'])
@@ -96,7 +96,7 @@ class RobustSilhouetteClassifier:
         if not occupied:
             return [['.' for _ in range(8)] for _ in range(8)]
             
-        # 2. 2-Means 自适应聚类判定黑白方
+        # 2. 2-Means-Clustering trennt Schwarz und Weiß
         means = [item[2]['mean'] for item in occupied]
         c1, c2 = min(means), max(means)
         for _ in range(10):
@@ -107,7 +107,7 @@ class RobustSilhouetteClassifier:
             
         split_thresh = (c1 + c2) / 2.0
         
-        # 3. 填入 8x8 结果
+        # 3. Das 8x8-Ergebnis füllen
         board_res = [['.' for _ in range(8)] for _ in range(8)]
         for r, c, f, cls_name in occupied:
             is_white = (f['mean'] >= split_thresh)
@@ -116,4 +116,4 @@ class RobustSilhouetteClassifier:
             
         return board_res
 
-print("RobustSilhouetteClassifier 加载完成！")
+print("RobustSilhouetteClassifier wurde geladen")

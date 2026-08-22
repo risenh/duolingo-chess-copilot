@@ -20,7 +20,7 @@ for r_idx in [0, 7]:
         crop = img[cy1:cy2, cx1:cx2]
         gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
         
-        # 统计非背景像素的垂直质心与边界
+        # Senkrechten Schwerpunkt und die Grenzen der Vordergrundpixel bestimmen
         bg_val = np.median(gray[:5, :5])
         diff = np.abs(gray.astype(float) - bg_val)
         mask = diff > 15

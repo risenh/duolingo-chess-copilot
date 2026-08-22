@@ -8,7 +8,7 @@ from grid_calibrate import locate_board, load_image
 
 def comb_filter_locate_board(image):
     """
-    基于 8 周期梳状谐振滤波器 + 格线直测精标定的超高鲁棒性棋盘定位算法
+    Sehr robuste Brettlokalisierung: Kammresonanzfilter über 8 Perioden und Feinkalibrierung über die Gitterlinien
     """
     res = locate_board(image, top_n=3)
     if res is None:
@@ -17,7 +17,7 @@ def comb_filter_locate_board(image):
     return (x0, y0, x0 + size, y0 + size)
 
 if __name__ == '__main__':
-    # 测试全量 6 张图
+    # Alle 6 Testbilder durchlaufen
     os.makedirs("scratch/debug_comb", exist_ok=True)
     all_images = [
         "duolingo_1.jpeg", "duolingo_2.jpg", "duolingo_3.jpg",
@@ -39,5 +39,5 @@ if __name__ == '__main__':
             cv2.line(vis, (l, int(t + i * step)), (r, int(t + i * step)), (0, 255, 0), 1)
         cv2.imwrite(f"scratch/debug_comb/{filename}_board.png", vis)
 
-    print("全部测试图梳状滤波定位完成！已保存至 scratch/debug_comb/")
+    print("Kammfilter-Lokalisierung für alle Testbilder abgeschlossen, gespeichert unter scratch/debug_comb/")
 

@@ -1,5 +1,5 @@
-# bug_19 定位器双峰验证: 同一图像上 T=731(Kotlin 离线面板) 与 T=1043(Python argmax) 两处候选框的梳状响应分对比
-# 若两处分数接近，说明定位器响应存在平台/双峰，Kotlin/Python argmax 平局裁决差异即可解释 superbug
+# Prüfung der Doppelspitze im Lokalisator (bug_19): Kammantwort der Kandidaten bei T=731 (Offline-Diagnose in Kotlin) und T=1043 (argmax in Python) auf demselben Bild
+# Liegen beide Werte nahe beieinander, hat die Antwort ein Plateau bzw. zwei Spitzen; der unterschiedliche Stichentscheid von Kotlin und Python erklärt dann den superbug
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -61,16 +61,16 @@ def score_at(image, x_full, y_full, size_full):
 
 img = cv2.imread("bug_19.jpg")
 h, w = img.shape[:2]
-print(f"bug_19.jpg 尺寸: {w}x{h}")
+print(f"Größe von bug_19.jpg: {w}x{h}")
 
-# Kotlin 离线面板框 [L=22,T=731,R=1254,B=1963] -> size=1232
-# Python argmax 框  [L=16,T=1043,R=1248,B=2275] -> size=1232
-for label, (x, y) in [("Kotlin面板框 T=731", (22, 731)), ("Python argmax T=1043", (16, 1043))]:
+# Rahmen der Kotlin-Offlinediagnose [L=22,T=731,R=1254,B=1963] -> size=1232
+# Rahmen aus dem argmax in Python  [L=16,T=1043,R=1248,B=2275] -> size=1232
+for label, (x, y) in [("Kotlin-Rahmen T=731", (22, 731)), ("Python argmax T=1043", (16, 1043))]:
     score, corr, edge, prior = score_at(img, x, y, 1232)
     print(f"{label}: score={score:.1f} (corr={corr:.1f}, edge={edge:.1f}, prior={prior})")
 
-# 垂直扫描: 固定 x=16 size=1232，y 从 500 到 h-1232 步长 20，找所有高分峰
-print("\n垂直响应扫描 (score > 400 的 y):")
+# Senkrechter Durchlauf: x=16 und size=1232 fest, y von 500 bis h-1232 in Schritten von 20, alle hohen Spitzen suchen
+print("\nSenkrechter Durchlauf der Antwort (y mit score > 400):")
 y_max_full = h - 1232
 y = 500
 while y <= y_max_full:

@@ -26,4 +26,4 @@ for img_name, out_dir in configs:
             cell = img[y1:y2, x1:x2]
             cv2.imwrite(f"{out_dir}/r{row}_c{col}.png", cell)
 
-print("全部格子已导出至 scratch/all_cells/！")
+print("Alle Felder wurden nach scratch/all_cells/ exportiert")

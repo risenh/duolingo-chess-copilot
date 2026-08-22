@@ -1,46 +1,50 @@
-# 🤝 贡献指南 (Contributing Guide)
+# 🤝 Leitfaden für Beiträge (Contributing Guide)
 
-感谢您对 **Duolingo Chess Copilot** 的关注！我们非常欢迎来自社区的代码贡献、Bug 修复、算法改进和功能建议。
+Vielen Dank für dein Interesse an **DuLo**! Beiträge aus der Community sind
+ausdrücklich willkommen: Code, Fehlerbehebungen, Verbesserungen an den Algorithmen und Vorschläge
+für neue Funktionen.
 
 ---
 
-## 🛠️ 开发与本地测试
+## 🛠️ Entwicklung und lokale Tests
 
-### 环境要求
-1. **JDK 17** (推荐 Temurin JDK 17)
-2. **Android Studio** (推荐 Hedgehog / Iguana / Ladybug 或更高版本)
-3. **Android NDK** (用于编译 Stockfish C++ 源码，如需二次开发引擎)
-4. **Git LFS** (克隆仓库后请运行 `git lfs pull`，以获取真实的 NNUE 权重)
+### Voraussetzungen
+1. **JDK 17** (empfohlen: Temurin JDK 17)
+2. **Android Studio** (empfohlen: Hedgehog / Iguana / Ladybug oder neuer)
+3. **Android NDK** (nur nötig, wenn die Stockfish-Quellen selbst übersetzt werden sollen)
+4. **Git LFS** (nach dem Klonen `git lfs pull` ausführen, sonst fehlen die echten NNUE-Gewichte)
 
-### 提交前本地自测
-在提交 Pull Request 前，请确保所有 Kotlin 单元测试均已通过：
+### Selbsttest vor dem Einreichen
+Vor einem Pull Request müssen alle Kotlin-Unit-Tests durchlaufen:
 
 ```bash
-cd android_copilot
+cd dulo
 ./gradlew testDebugUnitTest
 ```
 
 ---
 
-## 📝 提交规范 (Commit & PR)
+## 📝 Konventionen für Commits und Pull Requests
 
-1. **分支管理**：
-   - 请基于 `master` 分支创建新的功能/修复分支：`git checkout -b feature/your-feature-name` 或 `fix/your-fix-name`。
-2. **Commit 格式**：
-   - 推荐使用 Conventional Commits 规范，例如：
-     - `feat: 添加新型棋盘边缘检测算法`
-     - `fix: 修复特定分辨率下悬浮窗尺寸计算偏差`
-     - `docs: 完善英文 README 说明`
-     - `test: 增加残局双王位置单元测试用例`
-3. **代码风格**：
-   - 遵循 Kotlin 官方代码风格指南，禁止使用隐式非受检转换；
-   - 新增复杂算法或数学计算逻辑需配备对应的单元测试。
+1. **Branches**:
+   - Neue Zweige für Funktionen oder Fehlerbehebungen von `master` abzweigen:
+     `git checkout -b feature/dein-feature-name` bzw. `fix/deine-fehlerbehebung`.
+2. **Commit-Format**:
+   - Empfohlen sind Conventional Commits, zum Beispiel:
+     - `feat: neues Verfahren zur Erkennung der Brettkanten`
+     - `fix: falsche Größenberechnung des Overlays bei bestimmten Auflösungen`
+     - `docs: englische README ergänzt`
+     - `test: Unit-Test für die Königsstellung im Endspiel`
+3. **Codestil**:
+   - Dem offiziellen Kotlin-Styleguide folgen, keine impliziten ungeprüften Umwandlungen;
+   - Neue Algorithmen oder mathematische Berechnungen brauchen passende Unit-Tests.
 
 ---
 
-## 🐛 报告问题 (Bug Reports)
+## 🐛 Fehler melden (Bug Reports)
 
-若在多邻国特定关卡或特定机型上遇到定位偏差或识别错误，欢迎提交 Issue。提交时请附带：
-- 手机型号与 Android 系统版本；
-- 出现异常时的屏幕截图（请存入 `test_images/bugs/` 进行复现）；
-- 复现步骤与期望结果。
+Wenn die Lokalisierung oder die Erkennung in einem bestimmten Duolingo-Level oder auf einem
+bestimmten Gerät danebenliegt, freuen wir uns über ein Issue. Bitte lege bei:
+- Gerätemodell und Android-Version;
+- einen Screenshot der fehlerhaften Situation (für die Reproduktion bitte unter `test_images/bugs/` ablegen);
+- die Schritte zur Reproduktion und das erwartete Ergebnis.

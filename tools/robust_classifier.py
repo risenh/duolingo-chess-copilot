@@ -4,14 +4,14 @@ import os
 
 class UltraRobustDuolingoClassifier:
     """
-    终极多模态多邻国 2D 棋子分类器
-    纯净数学度量：
-    1. 严格 18%~82% 核心 ROI
-    2. 多模态归一化梯度场 + 归一化互相关 (NCC)
-    3. 自适应 2-Means 聚类区分白黑阵营
+    Multimodaler Figurenklassifikator für Duolingo-Schach
+    Rein rechnerische Kennzahlen:
+    1. Strenge Kern-ROI von 18 % bis 82 %
+    2. Multimodal normiertes Gradientenfeld mit normierter Kreuzkorrelation (NCC)
+    3. Adaptives 2-Means-Clustering trennt weiße und schwarze Figuren
     """
     def __init__(self):
-        # 收集来自三套主题环境中的真实正样本
+        # Echte Positivbeispiele aus drei verschiedenen Designs sammeln
         self.class_samples = {
             'P': [
                 "scratch/all_cells/img1/r6_c0.png", "scratch/all_cells/img1/r6_c1.png", "scratch/all_cells/img1/r6_c4.png", "scratch/all_cells/img1/r6_c6.png",
@@ -67,14 +67,14 @@ class UltraRobustDuolingoClassifier:
             self.templates[cls_name] = feats
 
     def _extract_feature(self, cell_img):
-        # 归一化为 48x48
+        # Auf 48x48 normieren
         resized = cv2.resize(cell_img, (48, 48))
         gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
         
-        # 严格截取中心 18%~82% 核心区域 (消除外框网格线)
+        # Streng den Kernbereich von 18 % bis 82 % schneiden (entfernt die Gitterlinien)
         core_gray = gray[9:39, 9:39]
         
-        # Sobel 梯度
+        # Sobel-Gradient
         gx = cv2.Sobel(core_gray, cv2.CV_32F, 1, 0, ksize=3)
         gy = cv2.Sobel(core_gray, cv2.CV_32F, 0, 1, ksize=3)
         mag = np.sqrt(gx**2 + gy**2)
@@ -93,21 +93,21 @@ class UltraRobustDuolingoClassifier:
     def classify_board(self, cells_8x8):
         feats_8x8 = [[self._extract_feature(cells_8x8[r][c]) for c in range(8)] for r in range(8)]
         
-        # 1. 判定空格子 vs 有子格
+        # 1. Leeres Feld von besetztem Feld unterscheiden
         occupied = []
         for r in range(8):
             for c in range(8):
                 f = feats_8x8[r][c]
-                # 空格子没有任何边缘和内部方差
+                # Ein leeres Feld hat weder Kanten noch Varianz im Inneren
                 if f['center_std'] < 6.0 or f['grad_mean'] < 8.0:
                     continue
                     
-                # 匹配 6 类棋子，选取模板库中相似度最高者
+                # Mit den 6 Figurenarten abgleichen und die ähnlichste Vorlage wählen
                 best_cls = 'P'
                 best_sim = -1e9
                 for cls_name, t_list in self.templates.items():
                     for t in t_list:
-                        # 纯余弦互相关 (Cosine NCC)
+                        # Reine Kosinus-Kreuzkorrelation (Cosine NCC)
                         cos_sim = float(np.sum(f['mag_norm'] * t['mag_norm']))
                         if cos_sim > best_sim:
                             best_sim = cos_sim
@@ -118,7 +118,7 @@ class UltraRobustDuolingoClassifier:
         if not occupied:
             return [['.' for _ in range(8)] for _ in range(8)]
             
-        # 2. 纯净 2-Means 聚类自适应划分黑白方（零硬编码阈值）
+        # 2. 2-Means-Clustering trennt Schwarz und Weiß ohne feste Schwellen
         means = [item[2]['center_mean'] for item in occupied]
         c1, c2 = min(means), max(means)
         for _ in range(10):
@@ -129,7 +129,7 @@ class UltraRobustDuolingoClassifier:
             
         split_thresh = (c1 + c2) / 2.0
         
-        # 3. 生成 8x8 棋盘
+        # 3. Das 8x8-Brett aufbauen
         board_res = [['.' for _ in range(8)] for _ in range(8)]
         for r, c, f, cls_name in occupied:
             is_white = (f['center_mean'] >= split_thresh)
@@ -138,4 +138,4 @@ class UltraRobustDuolingoClassifier:
             
         return board_res
 
-print("UltraRobustDuolingoClassifier 增强版加载成功！")
+print("UltraRobustDuolingoClassifier wurde geladen")

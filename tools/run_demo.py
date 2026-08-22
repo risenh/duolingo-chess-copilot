@@ -7,7 +7,7 @@ from engine_evaluator import evaluate_fen_cloud
 
 def uci_to_coords(uci_move, is_white_perspective, board_rect):
     """
-    将 UCI 走法 (如 'e7e5', 'g1f3') 映射为屏幕上的像素坐标 (x1, y1) -> (x2, y2)
+    Bildet einen UCI-Zug (z. B. 'e7e5', 'g1f3') auf Bildschirmkoordinaten ab: (x1, y1) -> (x2, y2)
     """
     l, t, r, b = board_rect
     step = (r - l) / 8.0
@@ -15,7 +15,7 @@ def uci_to_coords(uci_move, is_white_perspective, board_rect):
     from_sq = uci_move[:2]
     to_sq = uci_move[2:4]
     
-    # 解析 algebraic 坐标
+    # Algebraische Notation zerlegen
     # 'a'~'h' -> col 0~7
     # '1'~'8' -> rank 1~8
     col_map = {c: i for i, c in enumerate('abcdefgh')}
@@ -27,15 +27,15 @@ def uci_to_coords(uci_move, is_white_perspective, board_rect):
     to_rank = int(to_sq[1])
     
     if is_white_perspective:
-        # 白在下：rank 8 是屏幕第0行，rank 1 是屏幕第7行
-        # file 'a' 是屏幕第0列，file 'h' 是屏幕第7列
+    # Weiß unten: Reihe 8 ist Bildschirmzeile 0, Reihe 1 ist Bildschirmzeile 7
+    # Linie 'a' ist Bildschirmspalte 0, Linie 'h' ist Bildschirmspalte 7
         r1 = 8 - from_rank
         c1 = from_file
         r2 = 8 - to_rank
         c2 = to_file
     else:
-        # 黑在下：rank 1 是屏幕第0行，rank 8 是屏幕第7行
-        # file 'h' 是屏幕第0列，file 'a' 是屏幕第7列
+    # Schwarz unten: Reihe 1 ist Bildschirmzeile 0, Reihe 8 ist Bildschirmzeile 7
+    # Linie 'h' ist Bildschirmspalte 0, Linie 'a' ist Bildschirmspalte 7
         r1 = from_rank - 1
         c1 = 7 - from_file
         r2 = to_rank - 1
@@ -53,29 +53,29 @@ def uci_to_coords(uci_move, is_white_perspective, board_rect):
 
 def draw_overlay_suggestion(image, move_info, board_rect, is_white_persp):
     """
-    模拟 Android 悬浮层的发光半透明渲染
+    Bildet die leuchtende halbtransparente Darstellung des Android-Overlays nach
     """
     vis = image.copy()
     overlay = image.copy()
     
     p1, p2, sq1, sq2 = uci_to_coords(move_info['best_move'], is_white_persp, board_rect)
     
-    # 1. 高亮起点格子 (半透明青绿色)
+    # 1. Startfeld hervorheben (halbtransparentes Blaugrün)
     cv2.rectangle(overlay, (sq1[0], sq1[1]), (sq1[2], sq1[3]), (0, 230, 115), -1)
     
-    # 2. 高亮终点格子 (半透明金黄色)
+    # 2. Zielfeld hervorheben (halbtransparentes Goldgelb)
     cv2.rectangle(overlay, (sq2[0], sq2[1]), (sq2[2], sq2[3]), (0, 215, 255), -1)
     
-    # 混合半透明
+    # Halbtransparent überblenden
     cv2.addWeighted(overlay, 0.45, vis, 0.55, 0, vis)
     
-    # 3. 绘制平滑发光指示箭头
-    # 外发光阴影
+    # 3. Weich leuchtenden Pfeil zeichnen
+    # Äußerer Schein
     cv2.arrowedLine(vis, p1, p2, (0, 100, 0), 12, tipLength=0.25, line_type=cv2.LINE_AA)
-    # 内核亮绿箭头
+    # Heller grüner Kern des Pfeils
     cv2.arrowedLine(vis, p1, p2, (0, 255, 128), 6, tipLength=0.25, line_type=cv2.LINE_AA)
     
-    # 4. 在棋盘上方绘制局势微标胶囊 (Floating Pill)
+    # 4. Infofeld über dem Brett zeichnen (Floating Pill)
     eval_text = f"Best: {move_info['best_move']} | Eval: {move_info['eval_cp']/100:+.2f}"
     l, t, r, b = board_rect
     pill_w = 340
@@ -145,14 +145,14 @@ def run_pipeline(img_path, out_path):
     print(f"Perspective: {'White (Bottom)' if is_white_persp else 'Black (Bottom)'}")
     print(f"FEN: {full_fen}")
     
-    # 引擎计算
+    # Berechnung durch die Engine
     move_info = evaluate_fen_cloud(full_fen)
     print(f"Stockfish Result: {move_info}")
     
     if 'best_move' in move_info:
         vis = draw_overlay_suggestion(img, move_info, board_rect, is_white_persp)
         cv2.imwrite(out_path, vis)
-        print(f"建议走法渲染图已生成: {out_path}")
+        print(f"Bild mit dem empfohlenen Zug erzeugt: {out_path}")
 
 if __name__ == '__main__':
     os.makedirs("scratch/demo_results", exist_ok=True)

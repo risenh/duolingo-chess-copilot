@@ -1,7 +1,7 @@
 import subprocess
 import os
 
-so_path = "android_copilot/app/src/main/jniLibs/arm64-v8a/libstockfish.so"
+so_path = "dulo/app/src/main/jniLibs/arm64-v8a/libstockfish.so"
 with open(so_path, "rb") as f:
     content = f.read()
 

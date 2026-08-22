@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
-"""格线直测精标定回归验证 (阶段一门禁脚本)。
+"""Regressionsprüfung der Feinkalibrierung über die Gitterlinien (Gatterskript der Stufe 1).
 
-基准集为用户指定的 7 帧多邻国对局截图 + 阶段四真机事故帧 (共 8 帧), 真值经独立实测
-+ 人工目检确认 (2026-08-17/18): 覆盖带边距 (duolingo_1、Screenshot_20260816_131145)、
-满宽 (duolingo_2/bug_16/bug_17/Screenshot_20260817_121754)、
-负边距裁剪 (bug_20_lowsim) 三类布局, 以及机器人/真人对局的两种 y 位置。
-Screenshot_20260818_225702 是气泡/立绘遮挡棋盘上部的真机事故帧 (Kotlin 曾在
-400 空间 refine 被幻影框反超), 防回归专用。
+Die Referenzmenge besteht aus 7 vom Nutzer benannten Duolingo-Screenshots und dem Unfall-Frame aus Stufe 4 (zusammen 8 Frames). Die Sollwerte wurden unabhängig gemessen
+und von Hand geprüft (2026-08-17/18): abgedeckt sind Layouts mit Rand (duolingo_1, Screenshot_20260816_131145),
+bildbreite Layouts (duolingo_2, bug_16, bug_17, Screenshot_20260817_121754)
+und ein Ausschnitt mit negativem Rand (bug_20_lowsim) sowie beide y-Lagen aus Partien gegen den Computer und gegen Menschen.
+Screenshot_20260818_225702 ist der Unfall-Frame vom Gerät, auf dem Sprechblase und Figurengrafik den oberen Teil des Bretts verdecken (Kotlin ließ sich dort
+beim refine im 400er-Raum von einem Phantomrahmen überbieten) und dient als Regressionsschutz.
 
-断言 (测试用例):
-1. 定位缺失 → 直接失败 (不允许返回 None 静默通过);
-2. |x0 误差|, |y0 误差|, |size 误差| 均 <= TOL_PX (4px);
-3. 负边距裁剪帧 (rect 越出图像边界) 必须被识别: 置信度不得为 high
-   (high 保留给全框可见且双重证据通过的棋盘, 裁剪帧无法完整验证,
-   只能提示而非硬匹配); 未越界的帧不做此项限制。
+Zusicherungen (Testfälle):
+1. Keine Lokalisierung führt sofort zum Fehlschlag (None darf nicht stillschweigend durchgehen);
+2. |Fehler in x0|, |Fehler in y0| und |Fehler in size| liegen jeweils unter TOL_PX (4px);
+3. Ein Frame mit negativem Rand (Rect außerhalb des Bildes) muss erkannt werden: die Confidence darf nicht high sein
+   (high bleibt Brettern vorbehalten, die vollständig sichtbar sind und beide Belege bestehen; ein Ausschnitt lässt sich nicht vollständig prüfen
+   und kann nur gemeldet werden). Für Frames ohne Überlauf gilt diese Einschränkung nicht.
 
-设计约定:
-- 基准图缺失时响亮失败 (FileNotFoundError), 供 CI 门禁直接接入, 不静默跳过;
-- 真值以 (x0, y0, size) 整数三元组固化, 换机型/换 UI 时按同流程
-  (实测 + 目检) 追加新帧, 而非修改算法参数。
+Vereinbarungen:
+- Fehlt ein Referenzbild, scheitert das Skript deutlich (FileNotFoundError), damit die CI es direkt einbinden kann und nichts still übersprungen wird;
+- die Sollwerte stehen als ganzzahlige Tripel (x0, y0, size) fest; bei einem anderen Gerät oder einer neuen Oberfläche
+  kommen nach demselben Verfahren (messen und prüfen) neue Frames hinzu, statt die Parameter des Verfahrens zu ändern.
 """
 import os
 import sys
@@ -33,33 +33,33 @@ TOL_PX = 4.0
 
 Rect = Tuple[int, int, int]
 
-# 真值目录: 文件 -> (x0, y0, size, 布局说明)。
-# bug_20_lowsim 的 size=1264 > 屏宽 1260, 是负边距裁剪帧的真值形态。
-# Screenshot_20260816_131145 是真机带边距布局 (左右各 ~61px), 补真机非满宽缺口。
+# Verzeichnis der Sollwerte: Datei -> (x0, y0, size, Beschreibung des Layouts).
+# Bei bug_20_lowsim ist size=1264 größer als die Bildschirmbreite 1260, das ist die typische Form eines Ausschnitts mit negativem Rand.
+# Screenshot_20260816_131145 stammt vom Gerät und hat einen Rand (je etwa 61px), damit ist auch dieser Fall abgedeckt.
 GROUND_TRUTH: Dict[str, Tuple[Rect, str]] = {
-    'duolingo_1.jpeg':       ((36, 459, 677),  '带边距'),
-    'duolingo_2.jpg':        ((0, 719, 1179),  '满宽'),
-    'bug_16.jpg':            ((0, 1029, 1260), '满宽'),
-    'bug_17.jpg':            ((0, 1029, 1260), '满宽'),
-    'bug_20_lowsim.jpg':     ((-4, 989, 1264), '负边距裁剪'),
-    'Screenshot_20260816_131145.jpg': ((61, 1153, 1137), '真机带边距'),
-    'Screenshot_20260817_121754.jpg': ((0, 936, 1260),   '真机满宽'),
-    'Screenshot_20260818_225702.jpg': ((0, 1030, 1260),  '真机满宽+气泡立绘遮挡'),
+    'duolingo_1.jpeg':       ((36, 459, 677),  'mit Rand'),
+    'duolingo_2.jpg':        ((0, 719, 1179),  'bildbreit'),
+    'bug_16.jpg':            ((0, 1029, 1260), 'bildbreit'),
+    'bug_17.jpg':            ((0, 1029, 1260), 'bildbreit'),
+    'bug_20_lowsim.jpg':     ((-4, 989, 1264), 'Ausschnitt mit negativem Rand'),
+    'Screenshot_20260816_131145.jpg': ((61, 1153, 1137), 'Gerät, mit Rand'),
+    'Screenshot_20260817_121754.jpg': ((0, 936, 1260),   'Gerät, bildbreit'),
+    'Screenshot_20260818_225702.jpg': ((0, 1030, 1260),  'Gerät, bildbreit, von Sprechblase und Grafik verdeckt'),
 }
 
 
 def is_cropped(rect: Rect, img_w: int, img_h: int) -> bool:
-    """棋盘框越出图像边界即判为裁剪帧 (负边距情形)。"""
+    """Ragt der Brettrahmen über das Bild hinaus, gilt der Frame als Ausschnitt (negativer Rand)."""
     x0, y0, size = rect
     return x0 < 0 or y0 < 0 or x0 + size > img_w or y0 + size > img_h
 
 
 def check_frame(name: str) -> Optional[str]:
-    """单帧验证, 返回 None 表示通过, 否则返回失败原因字符串。"""
+    """Prüft einen Frame; None bedeutet bestanden, sonst folgt der Grund als Text."""
     path = os.path.join(BASE, name)
     if not os.path.exists(path):
-        # 响亮失败: CI 中基准图缺失必须暴露, 不允许静默跳过
-        raise FileNotFoundError(f'基准图缺失: {path}')
+        # Deutlicher Fehlschlag: ein fehlendes Referenzbild muss in der CI auffallen und darf nicht übersprungen werden
+        raise FileNotFoundError(f'Referenzbild fehlt: {path}')
     truth, note = GROUND_TRUTH[name]
     img = load_image(path)
     img_h, img_w = img.shape[:2]
@@ -68,21 +68,21 @@ def check_frame(name: str) -> Optional[str]:
     res = locate_board(img, top_n=3)
     cost = time.time() - t0
     if res is None:
-        return f'{name}: 定位失败 (无候选) [{note}]'
+        return f'{name}: Lokalisierung fehlgeschlagen (kein Kandidat) [{note}]'
 
     rect = res['rect']
-    errs = [f'{axis}: 得{got} 真{tru} 差{got - tru:+d}'
+    errs = [f'{axis}: ist {got}, soll {tru}, Differenz {got - tru:+d}'
             for axis, got, tru in zip(('x0', 'y0', 'size'), rect, truth)
             if abs(got - tru) > TOL_PX]
 
     cropped = is_cropped(rect, img_w, img_h)
-    # 裁剪帧只能"识别并提示": 框越界意味着格线证据不完整,
-    # 若算法仍给 high 说明它在硬匹配, 违背负边距场景契约
+    # Ein Ausschnitt kann nur erkannt und gemeldet werden: ragt der Rahmen über das Bild hinaus, sind die Gitterlinien unvollständig,
+    # gibt das Verfahren trotzdem high aus, erzwingt es eine Übereinstimmung und verletzt die Vereinbarung für negative Ränder
     if cropped and res['confidence'] == 'high':
-        errs.append(f'裁剪帧被标记 high 置信 (应为提示而非硬匹配)')
+        errs.append(f'Ausschnitt mit high bewertet (er darf nur gemeldet, nicht erzwungen werden)')
 
     status = ('PASS' if not errs else 'FAIL')
-    crop_tag = ' [裁剪帧-已识别]' if cropped else ''
+    crop_tag = ' [Ausschnitt erkannt]' if cropped else ''
     print(f'{status}  {name:24s} rect={rect} conf={res["confidence"]}'
           f'{crop_tag}  resid={res["residual"]:.2f}  {cost:.1f}s  [{note}]')
     for e in errs:
@@ -91,7 +91,7 @@ def check_frame(name: str) -> Optional[str]:
 
 
 def main() -> int:
-    print(f'格线直测精标定回归验证 (容差 {TOL_PX:.0f}px, {len(GROUND_TRUTH)} 帧)')
+    print(f'Regressionsprüfung der Gitterlinien-Feinkalibrierung (Toleranz {TOL_PX:.0f}px, {len(GROUND_TRUTH)} Frames)')
     failures = []
     for name in GROUND_TRUTH:
         try:
@@ -103,11 +103,11 @@ def main() -> int:
             failures.append(err)
     print()
     if failures:
-        print(f'结果: {len(failures)}/{len(GROUND_TRUTH)} 帧未通过')
+        print(f'Ergebnis: {len(failures)}/{len(GROUND_TRUTH)} Frames nicht bestanden')
         for f in failures:
             print(f'  - {f}')
         return 1
-    print(f'结果: {len(GROUND_TRUTH)}/{len(GROUND_TRUTH)} 帧全部通过')
+    print(f'Ergebnis: alle {len(GROUND_TRUTH)}/{len(GROUND_TRUTH)} Frames bestanden')
     return 0
 
 
